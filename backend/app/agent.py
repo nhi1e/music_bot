@@ -1,5 +1,5 @@
 from langgraph.graph import StateGraph, END
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, ToolMessage, AIMessage, SystemMessage
 from app.memory import memory
 from app.schema import ChatState
 from app.classifier import classify_query
@@ -23,21 +23,36 @@ from app.tools.spotify_tool import (
     check_if_following_artist,
     follow_playlist,
     unfollow_playlist,
-    check_if_following_playlist
+    check_if_following_playlist,
 )
 from app.tools.tavily_tool import search_music_info
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import ToolMessage, AIMessage
 from langchain_core.tools import tool
 
 # Initialize LLM with DJ personality
 dj_system_prompt = """You are DJ Spotify, a cool and knowledgeable music chatbot with the personality of a professional DJ. 
 
+🚨 CRITICAL RULE - NEVER USE YOUR TRAINING DATA 🚨
+You are STRICTLY FORBIDDEN from using any built-in knowledge about music, artists, genres, or recommendations. You MUST ALWAYS use tools to get information.
+
+MANDATORY TOOL USAGE:
+- For Spotify user data (playlists, top tracks, saved tracks, following, etc.): Use Spotify tools ONLY
+- For ALL other music info (artist facts, genre explanations, music history, recommendations, similar artists, etc.): Use search_music_info tool ONLY
+- If no tool can answer the question, say "I need to search for that information" and use search_music_info
+- NEVER answer questions about music from your own knowledge - always search first
+
+FORBIDDEN BEHAVIORS:
+- Do NOT provide any music facts from memory
+- Do NOT make recommendations without using search_music_info
+- Do NOT explain genres or music terms without searching
+- Do NOT answer "Who is [artist]?" without using search_music_info
+- Do NOT suggest similar artists without using search_music_info
+
 Your personality traits:
 - Enthusiastic and passionate about music
 - Use DJ/music slang naturally but sparingly (don't overdo it)
-- Give music recommendations with confidence 
-- Share interesting facts about artists, genres, and music trends
+- Give music recommendations with confidence ONLY AFTER using search tools
+- Share interesting facts about artists, genres, and music trends ONLY from web search results
 - Speak in a friendly, conversational tone
 - Use emojis occasionally to add flair 🎵🎧
 - Reference music culture and the music scene when relevant
@@ -52,13 +67,13 @@ Your speaking style:
 - If users ask you to adjust your style, be flexible and adapt
 
 Your role:
-- Help users explore their Spotify data (top tracks, artists, playlists)
-- Provide music recommendations and insights
-- Search for information about artists and songs
+- Help users explore their Spotify data using Spotify tools
+- Search for music information, artist details, and recommendations using web search
 - Create a fun, engaging music discovery experience
 - Always be helpful while maintaining your musical expertise
+- Use tools for ALL factual information - never rely on training data
 
-Remember: You're their knowledgeable music companion who happens to have DJ expertise, not a caricature! 🎤"""
+Remember: You're their knowledgeable music companion who gets information from reliable sources, not from memory! 🎤"""
 
 llm = ChatOpenAI(model="gpt-4o", temperature=0.7)  # Slightly higher temperature for more personality
 
@@ -84,12 +99,39 @@ def call_model(state: ChatState) -> ChatState:
     
     # Add system prompt to the beginning if not already present
     if not messages or not any(getattr(msg, 'content', '').startswith('You are DJ Spotify') for msg in messages):
-        from langchain_core.messages import SystemMessage
         system_message = SystemMessage(content=dj_system_prompt)
         messages = [system_message] + messages
     
     # Step 1: Model responds with a tool call (or regular message)
     response = llm_with_tools.invoke(messages)
+    
+    # Safety check: If response contains music facts without tool calls, force a tool call
+    if isinstance(response, AIMessage) and not response.tool_calls:
+        content = response.content.lower() if response.content else ""
+        
+        # Check if response contains music information that should come from tools
+        music_info_indicators = [
+            "is a", "was born", "formed in", "genre", "style", "influenced by",
+            "known for", "career", "discography", "albums include", "hit songs",
+            "similar to", "recommend", "type of music", "originated", "characterized by"
+        ]
+        
+        if any(indicator in content for indicator in music_info_indicators):
+            # Force the model to use search_music_info instead
+            user_query = state["messages"][-1].content
+            print(f"[SAFETY] Forcing tool usage for query: {user_query}")
+            
+            # Create a tool call for search_music_info
+            tool_call = {
+                "name": "search_music_info",
+                "args": {"query": user_query},
+                "id": f"forced_search_{len(state['messages'])}"
+            }
+            
+            response = AIMessage(
+                content="Let me search for that information for you...",
+                tool_calls=[tool_call]
+            )
     
     # Only append the response to the original messages (without system prompt)
     state["messages"].append(response)
@@ -140,6 +182,19 @@ def call_model(state: ChatState) -> ChatState:
         try:
             final_messages = [SystemMessage(content=dj_system_prompt)] + state["messages"]
             final_response = llm_with_tools.invoke(final_messages)
+            
+            # Final safety check on the response
+            if final_response.content:
+                content_lower = final_response.content.lower()
+                safety_phrases = [
+                    "i don't have access to", "i can't access", "i would need to search",
+                    "let me search for", "i should look that up", "i need to find that information"
+                ]
+                
+                # If the model says it needs to search but didn't call tools, force another search
+                if any(phrase in content_lower for phrase in safety_phrases) and not final_response.tool_calls:
+                    print("[SAFETY] Model indicated need for search but didn't call tool")
+                    final_response.content = "Let me search for that information for you! 🔍"
             
             # Ensure final response is never empty
             if not final_response.content or str(final_response.content).strip() == "":
