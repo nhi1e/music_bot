@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.env
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# OS-generated
+.DS_Store
+Thumbs.db
+
+# Jupyter/IPython
+.ipynb_checkpoints/
+
+# Logs and debug
+*.log
+*.tmp
+*.bak
+*.cache
+
+# Virtual environments
+venv/
+.env/
+.envrc
+
+# LangChain and LangGraph
+langchain.db
+.cache/
