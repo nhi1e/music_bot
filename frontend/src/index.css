@@ -10,14 +10,14 @@ body {
 	-moz-osx-font-smoothing: grayscale;
 }
 .pinyon-script-regular {
-  font-family: "Pinyon Script", cursive;
-  font-weight: 400;
-  font-style: normal;
+	font-family: "Pinyon Script", cursive;
+	font-weight: 400;
+	font-style: normal;
 }
 .adamina-regular {
-  font-family: "Adamina", serif;
-  font-weight: 400;
-  font-style: normal;
+	font-family: "Adamina", serif;
+	font-weight: 400;
+	font-style: normal;
 }
 
 @theme inline {
@@ -128,10 +128,19 @@ body {
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
+	* {
+		@apply border-border outline-ring/50;
 	}
-  body {
-    @apply bg-background text-foreground;
+	body {
+		@apply bg-background text-foreground;
 	}
+}
+
+/* Animation delays for typing indicator */
+.animation-delay-75 {
+	animation-delay: 75ms;
+}
+
+.animation-delay-150 {
+	animation-delay: 150ms;
 }

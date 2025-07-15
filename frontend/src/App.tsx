@@ -3,7 +3,6 @@ import "./App.css";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-
 interface SpotifyUser {
 	id: string;
 	display_name: string;
@@ -12,10 +11,20 @@ interface SpotifyUser {
 	images?: Array<{ url: string; height: number; width: number }>;
 }
 
+interface ChatMessage {
+	id: string;
+	content: string;
+	role: "user" | "assistant";
+	timestamp: Date;
+}
+
 function App() {
 	const [isAuthenticated, setIsAuthenticated] = useState(false);
 	const [isLoading, setIsLoading] = useState(true);
 	const [user, setUser] = useState<SpotifyUser | null>(null);
+	const [messages, setMessages] = useState<ChatMessage[]>([]);
+	const [inputValue, setInputValue] = useState("");
+	const [isTyping, setIsTyping] = useState(false);
 
 	useEffect(() => {
 		const checkAuth = async () => {
@@ -80,8 +89,62 @@ function App() {
 			await fetch("http://localhost:8080/auth/logout", { method: "POST" });
 			setIsAuthenticated(false);
 			setUser(null);
+			setMessages([]);
 		} catch (error) {
 			console.error("Error logging out:", error);
+		}
+	};
+
+	const handleSendMessage = async (e: React.FormEvent) => {
+		e.preventDefault();
+		if (!inputValue.trim()) return;
+
+		const userMessage: ChatMessage = {
+			id: Date.now().toString(),
+			content: inputValue,
+			role: "user",
+			timestamp: new Date(),
+		};
+
+		setMessages((prev) => [...prev, userMessage]);
+		setInputValue("");
+		setIsTyping(true);
+
+		try {
+			const response = await fetch("http://localhost:8080/chat", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ message: inputValue }),
+			});
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const data = await response.json();
+
+			const aiMessage: ChatMessage = {
+				id: (Date.now() + 1).toString(),
+				content: data.response || "Sorry, I couldn't process your request.",
+				role: "assistant",
+				timestamp: new Date(),
+			};
+
+			setMessages((prev) => [...prev, aiMessage]);
+		} catch (error) {
+			console.error("Error sending message:", error);
+			const errorMessage: ChatMessage = {
+				id: (Date.now() + 1).toString(),
+				content:
+					"Sorry, there was an error processing your request. Please try again.",
+				role: "assistant",
+				timestamp: new Date(),
+			};
+			setMessages((prev) => [...prev, errorMessage]);
+		} finally {
+			setIsTyping(false);
 		}
 	};
 	const asciiBackground = String.raw`
@@ -107,7 +170,7 @@ function App() {
 ⠀⠀⠈⣿⣿⡿⠃⠀⣰⡏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠈⣙⠓⠒⠚⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
     `;
-  const chatAsciiBackground = String.raw`
+	const chatAsciiBackground = String.raw`
   ⠀⠀⠀⠀⣠⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣴⡇⠀⠀⠀⠘⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⣼⣿⣿⣿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡼⣡⣇⠀⠀⠀⠀⣧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⢠⣿⣿⠟⢻⣿⠤⠖⠒⠚⠉⠉⠉⠉⠉⠉⢩⡟⣹⠋⣿⠉⠉⠛⠒⣺⡤⢄⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -128,7 +191,6 @@ function App() {
 ⠀⠀⠀⠀⢻⣿⣿⣿⠟⢀⣼⡿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢧⡀⠈⠉⠁⠀⠀⠀⠀⢀⣠⡿⣻⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠈⠛⠿⠿⠿⠿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠒⠲⠦⠶⠒⠚⠉⠁⠀⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
   `;
-
 
 	if (isLoading) {
 		return (
@@ -160,23 +222,26 @@ function App() {
 	return (
 		<div className="min-h-screen bg-black text-white flex flex-col font-mono">
 			{/* Header */}
-			<div className="container mx-auto px-4 py-6 flex justify-between items-center">
-				<h1 className="text-2xl pinyon-script-regular">Personal Music Bot</h1>
-				<div className="flex items-center space-x-4">
-					{user && (
-						<span className="text-sm adamina-regular">
-							Welcome, {user.display_name || user.id}!
-						</span>
-					)}
-					<Button
-						type="submit"
-						variant="outline"
-						className="border-white adamina-regular text-black hover:shadow-[2px_2px_0_white] hover:translate-x-[-1px] hover:translate-y-[-1px]"
-					>
-						Logout
-					</Button>
+			<div className="sticky top-0 z-50 bg-black">
+				<div className="container mx-auto px-4 py-5 flex justify-between items-center">
+					<h1 className="text-2xl pinyon-script-regular">Personal Music Bot</h1>
+					<div className="flex items-center space-x-4">
+						{user && (
+							<span className="text-sm adamina-regular">
+								Welcome, {user.display_name || user.id}!
+							</span>
+						)}
+						<Button
+							onClick={handleLogout}
+							variant="outline"
+							className="border-white adamina-regular text-black hover:shadow-[2px_2px_0_white] hover:translate-x-[-1px] hover:translate-y-[-1px]"
+						>
+							Logout
+						</Button>
+					</div>
 				</div>
 			</div>
+
 			{/* ASCII Background */}
 			<div className="relative w-full flex flex-col items-center text-center">
 				<pre className="text-white/50 text-[10px] leading-none select-none whitespace-pre-wrap px-2">
@@ -193,26 +258,75 @@ function App() {
 
 			{/* Chat content (scrollable area) */}
 			<div className="flex-1 overflow-y-auto px-4 pb-32 container mx-auto max-w-4xl space-y-4">
-				{/* Example chat messages */}
+				{messages.length === 0 ? (
+					<div className="text-center text-white/50 adamina-regular mt-8">
+						Start a conversation by asking about music, playlists, or
+						recommendations!
+					</div>
+				) : (
+					messages.map((message) => (
+						<div
+							key={message.id}
+							className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+						>
+							<div
+								className={`max-w-[70%] p-4 rounded-lg adamina-regular ${
+									message.role === "user"
+										? "bg-white text-black ml-4"
+										: "bg-white/10 text-white border border-white/20 mr-4"
+								}`}
+							>
+								<div className="whitespace-pre-wrap">{message.content}</div>
+								<div className="text-xs opacity-60 mt-2">
+									{message.timestamp.toLocaleTimeString()}
+								</div>
+							</div>
+						</div>
+					))
+				)}
 
-				{/* Add more chat messages dynamically here */}
+				{isTyping && (
+					<div className="flex justify-start">
+						<div className="max-w-[70%] p-4 rounded-lg bg-white/10 text-white border border-white/20 mr-4 adamina-regular">
+							<div className="text-sm mb-1">Music Bot</div>
+							<div className="flex items-center space-x-2">
+								<div className="flex space-x-1">
+									<div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+									<div className="w-2 h-2 bg-white rounded-full animate-pulse animation-delay-75"></div>
+									<div className="w-2 h-2 bg-white rounded-full animate-pulse animation-delay-150"></div>
+								</div>
+								<span className="text-white/60">Typing...</span>
+							</div>
+						</div>
+					</div>
+				)}
 			</div>
 
 			{/* Sticky input box at the bottom */}
-			<div className="sticky adamina-regular bottom-0 left-0 w-full bg-black  z-50">
-				<div className="container mx-auto px-4 py-4 max-w-4xl flex space-x-2">
-					<Input type="email" placeholder="Ask something" />
+			<div className="sticky adamina-regular bottom-0 left-0 w-full bg-black z-50">
+				<form
+					onSubmit={handleSendMessage}
+					className="container mx-auto px-4 py-4 max-w-4xl flex space-x-2"
+				>
+					<Input
+						type="text"
+						placeholder="Ask about music, playlists, or get recommendations..."
+						value={inputValue}
+						onChange={(e) => setInputValue(e.target.value)}
+						className="flex-1 bg-black border-white text-white placeholder:text-white/50 focus:border-white focus:ring-white/50"
+						disabled={isTyping}
+					/>
 					<Button
 						type="submit"
 						variant="outline"
-						className="border-white text-black hover:shadow-[2px_2px_0_white] hover:translate-x-[-1px] hover:translate-y-[-1px]"
+						className="border-white text-black hover:shadow-[2px_2px_0_white] hover:translate-x-[-1px] hover:translate-y-[-1px] disabled:opacity-50"
+						disabled={isTyping || !inputValue.trim()}
 					>
 						Send
 					</Button>
-				</div>
+				</form>
 			</div>
 		</div>
 	);
-  
 }
 export default App;
