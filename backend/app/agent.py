@@ -30,7 +30,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
 
 # Initialize LLM with DJ personality
-dj_system_prompt = """You are DJ Spotify, a cool and knowledgeable music chatbot with the personality of a professional DJ. 
+system_prompt = """You are DJ Spotify, a cool and knowledgeable music chatbot with the personality of a professional DJ. 
 
 🚨 CRITICAL RULE - NEVER USE YOUR TRAINING DATA 🚨
 You are STRICTLY FORBIDDEN from using any built-in knowledge about music, artists, genres, or recommendations. You MUST ALWAYS use tools to get information.
@@ -41,12 +41,25 @@ MANDATORY TOOL USAGE:
 - If no tool can answer the question, say "I need to search for that information" and use search_music_info
 - NEVER answer questions about music from your own knowledge - always search first
 
+CONVERSATIONAL FLOW:
+- Handle casual responses naturally ("yeah", "cool", "damn i see", "no", etc.) without forcing tool usage
+- Always keep the conversation connected to music topics
+- Be engaging and natural in conversation while staying music-focused
+- For brief acknowledgments, respond conversationally but suggest music-related follow-ups
+
+MEMORY SYSTEM - "REMEMBER" KEYWORD:
+- When user says "remember [something]", store that information and acknowledge it
+- When user asks about what you remember, recall those stored details
+- Keep track of user's stated preferences, favorite artists, songs, etc.
+- Examples: "remember my favorite genre is jazz", "remember I love Arctic Monkeys"
+
 FORBIDDEN BEHAVIORS:
 - Do NOT provide any music facts from memory
 - Do NOT make recommendations without using search_music_info
 - Do NOT explain genres or music terms without searching
 - Do NOT answer "Who is [artist]?" without using search_music_info
 - Do NOT suggest similar artists without using search_music_info
+- Do NOT force tool usage for casual conversational responses
 
 Your personality traits:
 - Enthusiastic and passionate about music
@@ -58,6 +71,7 @@ Your personality traits:
 - Reference music culture and the music scene when relevant
 - Be encouraging about users' music taste while introducing them to new sounds
 - Adapt your language style based on user feedback
+- Handle casual conversation naturally while steering back to music
 
 Your speaking style:
 - Use casual, friendly language that feels natural
@@ -65,6 +79,7 @@ Your speaking style:
 - Show genuine excitement when discussing music, but keep it balanced
 - Be knowledgeable but approachable
 - If users ask you to adjust your style, be flexible and adapt
+- For casual responses, be natural but suggest music-related topics
 
 Your role:
 - Help users explore their Spotify data using Spotify tools
@@ -72,6 +87,8 @@ Your role:
 - Create a fun, engaging music discovery experience
 - Always be helpful while maintaining your musical expertise
 - Use tools for ALL factual information - never rely on training data
+- Maintain natural conversation flow while keeping focus on music
+- Remember user preferences when they use the "remember" keyword
 
 Remember: You're their knowledgeable music companion who gets information from reliable sources, not from memory! 🎤"""
 
@@ -99,8 +116,27 @@ def call_model(state: ChatState) -> ChatState:
     
     # Add system prompt to the beginning if not already present
     if not messages or not any(getattr(msg, 'content', '').startswith('You are DJ Spotify') for msg in messages):
-        system_message = SystemMessage(content=dj_system_prompt)
+        system_message = SystemMessage(content=system_prompt)
         messages = [system_message] + messages
+    
+    # Check for "remember" keyword in user input
+    user_input = state["messages"][-1].content if state["messages"] else ""
+    if user_input.lower().startswith("remember "):
+        # Extract what the user wants to remember
+        memory_item = user_input[9:].strip()  # Remove "remember " prefix
+        
+        # Create a response acknowledging the memory and add it as a system note
+        memory_note = f"[USER PREFERENCE: {memory_item}]"
+        response_text = f"Got it! I'll remember that {memory_item}. 🎵 That's a solid preference to keep in mind for our music chats! Anything else you want to explore or discover? 🎧"
+        
+        # Add the memory as a system message for context, then the response
+        system_memory = SystemMessage(content=memory_note)
+        response = AIMessage(content=response_text)
+        
+        # Add both messages to maintain the memory context
+        state["messages"].append(system_memory)
+        state["messages"].append(response)
+        return {"messages": state["messages"]}
     
     # Step 1: Model responds with a tool call (or regular message)
     response = llm_with_tools.invoke(messages)
@@ -108,23 +144,49 @@ def call_model(state: ChatState) -> ChatState:
     # Safety check: If response contains music facts without tool calls, force a tool call
     if isinstance(response, AIMessage) and not response.tool_calls:
         content = response.content.lower() if response.content else ""
+        user_query = state["messages"][-1].content.lower().strip()
         
-        # Check if response contains music information that should come from tools
-        music_info_indicators = [
-            "is a", "was born", "formed in", "genre", "style", "influenced by",
-            "known for", "career", "discography", "albums include", "hit songs",
-            "similar to", "recommend", "type of music", "originated", "characterized by"
+        # Don't force tool usage for conversational responses or short phrases
+        conversational_phrases = [
+            "yeah", "ok", "cool", "nice", "damn", "wow", "hmm", "sure", "alright", 
+            "no", "yes", "bye", "hello", "hi", "thanks", "thank you", "lol",
+            "i see", "got it", "makes sense", "interesting", "good", "bad", "awesome"
         ]
         
-        if any(indicator in content for indicator in music_info_indicators):
+        # Check if it's just a conversational response (short and casual)
+        is_conversational = (
+            len(user_query.split()) <= 3 and 
+            any(phrase in user_query for phrase in conversational_phrases)
+        ) or user_query in ["👍", "👎", "🎵", "🎧", "😊", "😄", "😎"]
+        
+        # Only force tool usage if the response contains specific music facts AND it's not conversational
+        music_fact_indicators = [
+            "is a singer", "is a rapper", "is a band", "was born in", "formed in", 
+            "their genre is", "they are known for", "their career began", "their discography",
+            "albums include", "hit songs include", "originated in", "characterized by"
+        ]
+        
+        # Check if user is asking a direct music question that needs factual answers
+        direct_music_questions = [
+            "who is", "what is", "when was", "where is", "how many", "tell me about",
+            "what genre", "what style", "recommend", "similar to", "like"
+        ]
+        
+        needs_tool_usage = (
+            not is_conversational and 
+            (any(indicator in content for indicator in music_fact_indicators) or 
+             any(question in user_query for question in direct_music_questions))
+        )
+        
+        if needs_tool_usage:
             # Force the model to use search_music_info instead
-            user_query = state["messages"][-1].content
-            print(f"[SAFETY] Forcing tool usage for query: {user_query}")
+            original_user_query = state["messages"][-1].content
+            print(f"[SAFETY] Forcing tool usage for query: {original_user_query}")
             
             # Create a tool call for search_music_info
             tool_call = {
                 "name": "search_music_info",
-                "args": {"query": user_query},
+                "args": {"query": original_user_query},
                 "id": f"forced_search_{len(state['messages'])}"
             }
             
@@ -180,7 +242,7 @@ def call_model(state: ChatState) -> ChatState:
 
         # Step 4: Re-call model with tool response included (with system prompt)
         try:
-            final_messages = [SystemMessage(content=dj_system_prompt)] + state["messages"]
+            final_messages = [SystemMessage(content=system_prompt)] + state["messages"]
             final_response = llm_with_tools.invoke(final_messages)
             
             # Final safety check on the response
@@ -217,12 +279,27 @@ def call_model(state: ChatState) -> ChatState:
 # LangGraph setup
 builder = StateGraph(ChatState)
 
-builder.set_entry_point("router")  
-builder.add_conditional_edges("router", router)
+# Add nodes
+builder.add_node("router", lambda x: x)  # just passes state through  
 builder.add_node("spotify", call_model)
 builder.add_node("web", call_model)
-builder.add_node("router", lambda x: x)  # just passes state through
 
+# Set entry point
+builder.set_entry_point("router")
+
+# Add conditional edges from router to specific handlers
+builder.add_conditional_edges(
+    "router", 
+    router,
+    {
+        "spotify": "spotify",
+        "web": "web"
+    }
+)
+
+# Add edges to END
+builder.add_edge("spotify", END)
+builder.add_edge("web", END)
 
 # Compile graph with memory
 graph = builder.compile(checkpointer=memory)
