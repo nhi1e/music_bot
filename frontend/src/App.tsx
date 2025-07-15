@@ -1,8 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./App.css";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import ReactMarkdown from "react-markdown";
 
 interface SpotifyUser {
 	id: string;
@@ -26,6 +33,20 @@ function App() {
 	const [messages, setMessages] = useState<ChatMessage[]>([]);
 	const [inputValue, setInputValue] = useState("");
 	const [isTyping, setIsTyping] = useState(false);
+	const chatContainerRef = useRef<HTMLDivElement>(null);
+	const messagesEndRef = useRef<HTMLDivElement>(null);
+
+	// Utility function for aggressive scrolling
+	const forceScrollToBottom = () => {
+		if (chatContainerRef.current) {
+			const container = chatContainerRef.current;
+			// Force immediate scroll without smooth behavior
+			container.scrollTop = container.scrollHeight + 3000;
+		}
+		if (messagesEndRef.current) {
+			messagesEndRef.current.scrollIntoView({ block: 'end', inline: 'nearest' });
+		}
+	};
 
 	useEffect(() => {
 		const checkAuth = async () => {
@@ -80,6 +101,37 @@ function App() {
 		checkAuth();
 	}, []);
 
+	// Auto-scroll to the latest message - aggressive approach
+	useEffect(() => {
+		const scrollToBottom = () => {
+			// Method 1: Scroll container to max height
+			if (chatContainerRef.current) {
+				const container = chatContainerRef.current;
+				container.scrollTop = container.scrollHeight + 1000; // Extra padding to ensure full scroll
+			}
+			
+			// Method 2: Scroll to end element with multiple attempts
+			if (messagesEndRef.current) {
+				messagesEndRef.current.scrollIntoView({ 
+					behavior: 'smooth',
+					block: 'end',
+					inline: 'nearest'
+				});
+			}
+		};
+
+		// Multiple scroll attempts with increasing delays
+		const timeouts = [
+			setTimeout(scrollToBottom, 50),
+			setTimeout(scrollToBottom, 150),
+			setTimeout(scrollToBottom, 300),
+			setTimeout(forceScrollToBottom, 500), // Use utility function for final scroll
+			setTimeout(forceScrollToBottom, 800)  // Extra attempt
+		];
+		
+		return () => timeouts.forEach(clearTimeout);
+	}, [messages, isTyping]);
+
 	const handleSpotifyLogin = () => {
 		const backendUrl = "http://localhost:8080";
 		window.location.href = `${backendUrl}/auth/spotify`;
@@ -111,6 +163,22 @@ function App() {
 		setInputValue("");
 		setIsTyping(true);
 
+		// Aggressive scroll to bottom after adding user message
+		setTimeout(() => {
+			if (chatContainerRef.current) {
+				chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight + 1000;
+			}
+			if (messagesEndRef.current) {
+				messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+			}
+		}, 50);
+		
+		setTimeout(() => {
+			if (chatContainerRef.current) {
+				chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight + 1000;
+			}
+		}, 200);
+
 		try {
 			const response = await fetch("http://localhost:8080/chat", {
 				method: "POST",
@@ -134,6 +202,28 @@ function App() {
 			};
 
 			setMessages((prev) => [...prev, aiMessage]);
+			
+			// Aggressive scroll to bottom after adding AI message
+			setTimeout(() => {
+				if (chatContainerRef.current) {
+					chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight + 1000;
+				}
+				if (messagesEndRef.current) {
+					messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+				}
+			}, 50);
+			
+			setTimeout(() => {
+				if (chatContainerRef.current) {
+					chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight + 1000;
+				}
+			}, 200);
+			
+			setTimeout(() => {
+				if (chatContainerRef.current) {
+					chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight + 1000;
+				}
+			}, 500);
 		} catch (error) {
 			console.error("Error sending message:", error);
 			const errorMessage: ChatMessage = {
@@ -144,6 +234,22 @@ function App() {
 				timestamp: new Date(),
 			};
 			setMessages((prev) => [...prev, errorMessage]);
+			
+			// Aggressive scroll to bottom after adding error message
+			setTimeout(() => {
+				if (chatContainerRef.current) {
+					chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight + 1000;
+				}
+				if (messagesEndRef.current) {
+					messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+				}
+			}, 50);
+			
+			setTimeout(() => {
+				if (chatContainerRef.current) {
+					chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight + 1000;
+				}
+			}, 200);
 		} finally {
 			setIsTyping(false);
 		}
@@ -229,31 +335,36 @@ function App() {
 					<div className="flex items-center space-x-4">
 						{user && (
 							<div className="flex items-center space-x-3">
-								<Avatar className="h-8 w-8 border border-white/20">
-									<AvatarImage
-										src={
-											user.images && user.images.length > 0
-												? user.images[0].url
-												: undefined
-										}
-										alt={user.display_name || user.id}
-									/>
-									<AvatarFallback className="bg-white/10 text-white text-xs adamina-regular">
-										{(user.display_name || user.id).charAt(0).toUpperCase()}
-									</AvatarFallback>
-								</Avatar>
 								<span className="text-sm adamina-regular">
-									Welcome, {user.display_name || user.id}!
+									{user.display_name || user.id}
 								</span>
+								<DropdownMenu>
+									<DropdownMenuTrigger>
+										<Avatar className="h-8 w-8 border border-white/20">
+											<AvatarImage
+												src={
+													user.images && user.images.length > 0
+														? user.images[0].url
+														: undefined
+												}
+												alt={user.display_name || user.id}
+											/>
+											<AvatarFallback className="bg-white/10 text-white text-xs adamina-regular">
+												{(user.display_name || user.id).charAt(0).toUpperCase()}
+											</AvatarFallback>
+										</Avatar>
+									</DropdownMenuTrigger>
+									<DropdownMenuContent className="w-auto min-w-[6rem]">
+										<DropdownMenuItem
+											onClick={handleLogout}
+											className="cursor-pointer adamina-regular text-black hover:bg-white/10 focus:bg-white/10 px-2 py-2"
+										>
+											Logout
+										</DropdownMenuItem>
+									</DropdownMenuContent>
+								</DropdownMenu>
 							</div>
 						)}
-						<Button
-							onClick={handleLogout}
-							variant="outline"
-							className="border-white adamina-regular text-black hover:shadow-[2px_2px_0_white] hover:translate-x-[-1px] hover:translate-y-[-1px]"
-						>
-							Logout
-						</Button>
 					</div>
 				</div>
 			</div>
@@ -273,7 +384,10 @@ function App() {
 			</div>
 
 			{/* Chat content (scrollable area) */}
-			<div className="flex-1 overflow-y-auto px-4 pb-32 container mx-auto max-w-4xl space-y-4">
+			<div
+				ref={chatContainerRef}
+				className="flex-1 overflow-y-auto px-4 pb-40 container mx-auto max-w-4xl space-y-4"
+			>
 				{messages.length === 0 ? (
 					<div className="text-center text-white/50 adamina-regular mt-8">
 						Start a conversation by asking about music, playlists, or
@@ -292,7 +406,9 @@ function App() {
 										: "bg-white/10 text-white  mr-4"
 								}`}
 							>
-								<div className="whitespace-pre-wrap">{message.content}</div>
+								<div className="whitespace-pre-wrap">
+									<ReactMarkdown>{message.content}</ReactMarkdown>
+								</div>
 								<div className="text-xs opacity-60 mt-2">
 									{message.timestamp.toLocaleTimeString()}
 								</div>
@@ -315,6 +431,9 @@ function App() {
 						</div>
 					</div>
 				)}
+
+				{/* Scroll target element - taller for better visibility */}
+				<div ref={messagesEndRef} className="h-8" />
 			</div>
 
 			{/* Sticky input box at the bottom */}
