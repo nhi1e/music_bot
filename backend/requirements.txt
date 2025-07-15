@@ -4,3 +4,6 @@ openai
 spotipy
 tavily-python
 python-dotenv
+fastapi
+uvicorn[standard]
+python-multipart
