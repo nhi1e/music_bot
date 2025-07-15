@@ -270,10 +270,10 @@ function App() {
 							className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
 						>
 							<div
-								className={`max-w-[70%] p-4 rounded-lg adamina-regular ${
+								className={`max-w-[70%] p-4 rounded-lg adamina-regular text-sm ${
 									message.role === "user"
 										? "bg-white text-black ml-4"
-										: "bg-white/10 text-white border border-white/20 mr-4"
+										: "bg-white/10 text-white  mr-4"
 								}`}
 							>
 								<div className="whitespace-pre-wrap">{message.content}</div>

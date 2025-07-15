@@ -7,6 +7,9 @@ from spotipy.oauth2 import SpotifyOAuth
 import os
 from dotenv import load_dotenv
 import urllib.parse
+from langchain_core.messages import HumanMessage
+from app.agent import graph
+from app.schema import ChatState
 
 # Load environment variables
 load_dotenv()
@@ -16,6 +19,10 @@ app = FastAPI(title="Music Recommendation Bot API")
 # Pydantic models
 class ChatMessage(BaseModel):
     message: str
+
+# In-memory session storage for conversation history
+# In production, this should be replaced with a proper database
+conversation_sessions = {}
 
 # Add CORS middleware
 app.add_middleware(
@@ -123,12 +130,30 @@ async def auth_status():
 
 @app.post("/auth/logout")
 async def logout():
-    """Logout user by clearing token cache"""
+    """Logout user by clearing token cache and conversation history"""
     try:
+        # Get user info before clearing token to clear their conversation
+        sp_oauth = get_spotify_oauth()
+        token_info = sp_oauth.get_cached_token()
+        
+        if token_info:
+            try:
+                sp = spotipy.Spotify(auth=token_info['access_token'])
+                user_info = sp.current_user()
+                user_id = user_info['id']
+                
+                # Clear conversation history for this user
+                if user_id in conversation_sessions:
+                    del conversation_sessions[user_id]
+                    print(f"Cleared conversation history for user: {user_id}")
+            except:
+                pass  # If token is invalid, just continue with logout
+        
         # Remove the cached token file
         cache_path = ".spotify_cache"
         if os.path.exists(cache_path):
             os.remove(cache_path)
+        
         return {"message": "Logged out successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error logging out: {str(e)}")
@@ -161,7 +186,7 @@ async def get_user_profile():
 
 @app.post("/chat")
 async def chat(message: ChatMessage):
-    """Handle chat messages from the frontend"""
+    """Handle chat messages using the LangGraph agent"""
     try:
         # Check if user is authenticated
         sp_oauth = get_spotify_oauth()
@@ -170,48 +195,51 @@ async def chat(message: ChatMessage):
         if not token_info:
             raise HTTPException(status_code=401, detail="Not authenticated")
         
+        # Get user ID for session management
         sp = spotipy.Spotify(auth=token_info['access_token'])
+        user_info = sp.current_user()
+        user_id = user_info['id']
         
-        # For now, let's implement a simple response system
-        # Later this can be integrated with the MCP agent
-        user_message = message.message.lower()
+        # Get or create conversation session for this user
+        if user_id not in conversation_sessions:
+            conversation_sessions[user_id] = []
         
-        if "hello" in user_message or "hi" in user_message:
-            response = "Hello! I'm your personal music bot. I can help you discover new music, create playlists, and give recommendations based on your Spotify data. What would you like to explore today?"
-        elif "playlist" in user_message:
-            # Get user's playlists
-            playlists = sp.current_user_playlists(limit=5)
-            playlist_names = [p['name'] for p in playlists['items']]
-            response = f"I can see you have some great playlists! Here are a few: {', '.join(playlist_names)}. Would you like me to analyze any of these or help you create a new one?"
-        elif "recommendation" in user_message or "recommend" in user_message:
-            # Get user's top tracks for recommendations
-            top_tracks = sp.current_user_top_tracks(limit=3, time_range='short_term')
-            if top_tracks['items']:
-                track_names = [f"{track['name']} by {track['artists'][0]['name']}" for track in top_tracks['items']]
-                response = f"Based on your recent listening, I see you've been enjoying: {', '.join(track_names)}. I can suggest similar tracks or help you discover new artists in these genres!"
-            else:
-                response = "I'd love to give you recommendations! Could you tell me what genres or artists you're currently interested in?"
-        elif "top" in user_message and ("track" in user_message or "song" in user_message):
-            top_tracks = sp.current_user_top_tracks(limit=5, time_range='short_term')
-            if top_tracks['items']:
-                tracks = [f"{i+1}. {track['name']} by {track['artists'][0]['name']}" for i, track in enumerate(top_tracks['items'])]
-                response = f"Here are your top tracks recently:\n\n{chr(10).join(tracks)}"
-            else:
-                response = "I couldn't find your top tracks. Make sure you've been listening to music on Spotify!"
-        elif "artist" in user_message and "top" in user_message:
-            top_artists = sp.current_user_top_artists(limit=5, time_range='short_term')
-            if top_artists['items']:
-                artists = [f"{i+1}. {artist['name']}" for i, artist in enumerate(top_artists['items'])]
-                response = f"Here are your top artists recently:\n\n{chr(10).join(artists)}"
-            else:
-                response = "I couldn't find your top artists. Keep listening to build up your music profile!"
-        else:
-            response = "I'm here to help with your music needs! You can ask me about your playlists, get recommendations, see your top tracks and artists, or discover new music. What would you like to explore?"
+        # Add user message to session history
+        user_message = HumanMessage(content=message.message)
+        conversation_sessions[user_id].append(user_message)
         
-        return {"response": response}
+        # Create chat state with conversation history
+        state = ChatState(messages=conversation_sessions[user_id].copy())
+        
+        # Use thread ID based on user ID for memory persistence
+        thread_id = f"user_{user_id}"
+        config = {"configurable": {"thread_id": thread_id}}
+        
+        # Run the agent
+        result = graph.invoke(state, config=config)
+        
+        # Get the last AI message from the result
+        ai_response = None
+        for msg in reversed(result["messages"]):
+            if hasattr(msg, 'content') and msg.content and not msg.content.startswith('['):
+                # Skip system messages and memory notes that start with [
+                if hasattr(msg, '__class__') and 'AI' in msg.__class__.__name__:
+                    ai_response = msg.content
+                    break
+        
+        if not ai_response:
+            ai_response = "Hey! I'm having some trouble with that response. Mind trying again? 🎧"
+        
+        # Update conversation session with the complete result
+        conversation_sessions[user_id] = result["messages"]
+        
+        return {"response": ai_response}
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing chat message: {str(e)}")
+        print(f"Chat error: {str(e)}")
+        # Return a DJ-style error message
+        error_response = f"Yo, I hit a technical snag there! 🎵 Let's try that again - {str(e)}"
+        return {"response": error_response}
 
 if __name__ == "__main__":
     import uvicorn
