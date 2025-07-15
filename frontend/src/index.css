@@ -3,6 +3,14 @@
 
 @custom-variant dark (&:is(.dark *));
 
+html,
+body {
+  overscroll-behavior: none;
+  scroll-behavior: smooth;
+  height: 100%;
+  overflow-x: hidden;
+}
+
 body {
 	margin: 0;
 	font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;

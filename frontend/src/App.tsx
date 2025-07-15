@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./App.css";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface SpotifyUser {
 	id: string;
@@ -227,9 +228,24 @@ function App() {
 					<h1 className="text-2xl pinyon-script-regular">Personal Music Bot</h1>
 					<div className="flex items-center space-x-4">
 						{user && (
-							<span className="text-sm adamina-regular">
-								Welcome, {user.display_name || user.id}!
-							</span>
+							<div className="flex items-center space-x-3">
+								<Avatar className="h-8 w-8 border border-white/20">
+									<AvatarImage
+										src={
+											user.images && user.images.length > 0
+												? user.images[0].url
+												: undefined
+										}
+										alt={user.display_name || user.id}
+									/>
+									<AvatarFallback className="bg-white/10 text-white text-xs adamina-regular">
+										{(user.display_name || user.id).charAt(0).toUpperCase()}
+									</AvatarFallback>
+								</Avatar>
+								<span className="text-sm adamina-regular">
+									Welcome, {user.display_name || user.id}!
+								</span>
+							</div>
 						)}
 						<Button
 							onClick={handleLogout}
@@ -287,15 +303,14 @@ function App() {
 
 				{isTyping && (
 					<div className="flex justify-start">
-						<div className="max-w-[70%] p-4 rounded-lg bg-white/10 text-white border border-white/20 mr-4 adamina-regular">
-							<div className="text-sm mb-1">Music Bot</div>
+						<div className="max-w-[70%] p-4 rounded-lg bg-white/10 text-white mr-4 adamina-regular">
 							<div className="flex items-center space-x-2">
 								<div className="flex space-x-1">
 									<div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
 									<div className="w-2 h-2 bg-white rounded-full animate-pulse animation-delay-75"></div>
 									<div className="w-2 h-2 bg-white rounded-full animate-pulse animation-delay-150"></div>
 								</div>
-								<span className="text-white/60">Typing...</span>
+								<span className="text-white/60 text-sm">Typing...</span>
 							</div>
 						</div>
 					</div>
