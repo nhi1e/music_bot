@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
 import "./App.css";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
 
 interface SpotifyUser {
 	id: string;
@@ -104,6 +107,28 @@ function App() {
 ⠀⠀⠈⣿⣿⡿⠃⠀⣰⡏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠈⣙⠓⠒⠚⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
     `;
+  const chatAsciiBackground = String.raw`
+  ⠀⠀⠀⠀⣠⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣴⡇⠀⠀⠀⠘⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⣼⣿⣿⣿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡼⣡⣇⠀⠀⠀⠀⣧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢠⣿⣿⠟⢻⣿⠤⠖⠒⠚⠉⠉⠉⠉⠉⠉⢩⡟⣹⠋⣿⠉⠉⠛⠒⣺⡤⢄⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢸⣿⡟⠀⢠⣿⡇⠀⢀⡄⠀⠀⠀⠀⠀⠀⣏⣼⣃⣠⣽⡤⠤⢴⠯⣭⠧⢼⣎⡳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠈⣿⡇⠀⣼⣿⡇⠀⠰⣇⣠⡤⠴⠒⠚⠉⣿⠁⣤⣾⣿⡇⢀⣈⣉⣥⡤⢼⠬⣯⣛⣆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡄⠀⠀⠀⠀⠀
+⠀⠀⠀⢻⣧⣼⣿⣿⠧⠒⠋⣏⣄⠀⠀⠀⠀⠀⢹⣀⡿⠿⠛⠉⠉⠁⠀⣀⣴⣾⠾⠓⠲⡯⣧⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣞⣇⠀⠀⠀⠀⠀
+⠀⠀⠀⣠⣿⣿⣿⡟⠀⠀⠀⣇⡿⠃⣀⡤⠴⠚⢹⡇⠀⠀⣀⡠⠖⠚⠉⢀⣀⠤⠖⠚⣹⣋⣏⡟⣦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⢯⠏⢿⠀⠀⣄⠀⠀
+⠀⠀⣴⣿⣿⣿⡟⠀⠀⠀⢀⡫⠖⠋⠁⠀⠀⣠⣤⣧⠴⠋⠁⠀⣀⡤⠚⠉⠀⠀⠀⣰⠃⡽⠣⣏⡧⢧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⠀⢸⣧⣴⣾⣀⠀⢸⡀⠀
+⢀⣾⣿⣿⡿⢻⣷⢀⡤⠞⠉⠀⠀⠀⠀⢀⣼⣿⡿⠏⠀⣀⡴⠛⠁⠀⠀⠀⠀⢀⡴⠁⡴⠁⡼⢸⣷⢸⠀⠀⠀⠀⠈⣧⠀⠀⠀⣀⡠⠔⠚⠉⠁⠀⠀⠀⠈⡇⠉⠁⠀⠉⣑⣧⢄
+⣼⣿⣿⠟⠀⣨⣿⣿⣿⣷⣦⡀⢀⣠⠖⠋⠀⠀⢀⣤⠞⠁⠀⠀⠀⠀⠀⣦⣠⠞⢶⡞⠣⣼⢁⡼⢁⡏⠀⠀⠀⠀⠀⢘⣧⠔⠋⠁⢀⡀⣀⡠⠴⠒⠚⢩⣽⡯⠉⠉⠉⠙⠷⠞⠤
+⣿⣿⡏⠀⣾⣿⣿⣿⡿⢿⣿⣿⣏⠁⠀⠀⢠⡴⠋⠀⠀⠀⠀⠀⠀⠀⠀⢰⠛⢦⠎⢉⠿⣌⡞⢀⡞⠀⠀⠀⢀⡤⠚⠉⠘⣇⣀⠤⠚⣯⠁⠀⠀⣀⣤⠼⠟⠓⠒⠒⠒⠒⢓⠒⠒
+⣿⣿⡇⠰⣿⣿⠁⢻⣧⠀⠹⣿⣿⠀⣠⠞⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡇⢠⢯⣷⡏⢰⢿⢇⠞⠀⣀⠴⠚⠁⠀⢀⣠⡶⢻⡇⠀⢀⡸⡶⠚⠉⠀⢸⡓⣦⣠⠤⠤⠒⠒⢺⡂⢉
+⠘⣿⣇⠀⢻⣿⣄⠈⣿⡆⠀⣿⣿⠞⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠱⣮⣸⣋⣰⣋⣤⠾⠒⠉⠀⣠⣆⡠⠖⠋⠹⠤⣞⠴⠚⠁⠀⢻⣀⡤⠖⠊⡏⢸⠇⠀⣀⠤⠔⠺⠟⠈
+⠀⠘⢿⣷⣄⡈⠛⠛⢸⣿⣾⡿⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢾⣠⠇⢠⠋⠀⣀⣠⣾⡟⡏⠀⠀⣀⠴⠊⠁⠀⢀⡠⣶⣿⡇⠀⢀⣴⣾⠼⠚⠉⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠈⠙⠛⠿⠿⠟⢻⣯⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢾⢉⠏⠉⠉⠁⣻⢋⣤⡧⠴⠋⢷⡀⢀⡤⠚⠉⠀⠿⠿⣃⠴⠚⠛⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⢀⣀⡀⠀⠈⣿⣇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⣽⠒⠠⠤⠔⣿⠛⠛⠁⠀⣀⡬⢿⠁⠀⠀⠀⣀⡴⠚⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⣰⣿⣿⣿⣆⠀⢸⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢹⠦⣀⣀⣤⣿⣀⡠⠴⠊⠁⠀⢈⣧⣀⠴⠚⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⢻⣿⣿⣿⠟⢀⣼⡿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢧⡀⠈⠉⠁⠀⠀⠀⠀⢀⣠⡿⣻⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠈⠛⠿⠿⠿⠿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠒⠲⠦⠶⠒⠚⠉⠁⠀⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+  `;
+
 
 	if (isLoading) {
 		return (
@@ -133,61 +158,61 @@ function App() {
 	}
 
 	return (
-		<div className="min-h-screen bg-black text-white">
-			<div className="container mx-auto px-4 py-8">
-				{/* Header */}
-				<div className="flex justify-between items-center mb-8">
-					<h1 className="text-2xl pinyon-script-regular">Personal Music Bot</h1>
-					<div className="flex items-center space-x-4">
-						{user && (
-							<span className="text-sm adamina-regular">
-								Welcome, {user.display_name || user.id}!
-							</span>
-						)}
-						<button
-							onClick={handleLogout}
-							className="bg-black border border-white text-white adamina-regular px-4 py-2 transition-all duration-200 hover:shadow-[2px_2px_0_white] hover:translate-x-[-1px] hover:translate-y-[-1px]"
-						>
-							Logout
-						</button>
-					</div>
+		<div className="min-h-screen bg-black text-white flex flex-col font-mono">
+			{/* Header */}
+			<div className="container mx-auto px-4 py-6 flex justify-between items-center">
+				<h1 className="text-2xl pinyon-script-regular">Personal Music Bot</h1>
+				<div className="flex items-center space-x-4">
+					{user && (
+						<span className="text-sm adamina-regular">
+							Welcome, {user.display_name || user.id}!
+						</span>
+					)}
+					<Button
+						type="submit"
+						variant="outline"
+						className="border-white adamina-regular text-black hover:shadow-[2px_2px_0_white] hover:translate-x-[-1px] hover:translate-y-[-1px]"
+					>
+						Logout
+					</Button>
 				</div>
+			</div>
+			{/* ASCII Background */}
+			<div className="relative w-full flex flex-col items-center text-center">
+				<pre className="text-white/50 text-[10px] leading-none select-none whitespace-pre-wrap px-2">
+					{chatAsciiBackground}
+				</pre>
+			</div>
 
-				{/* Chat interface */}
-				<div className="max-w-4xl mx-auto">
-					<div className="bg-black border border-white p-6 mb-4">
-						<h2 className="text-xl adamina-regular mb-4">
-							🎵 Ready to discover amazing music!
-						</h2>
-						<p className="text-gray-300 mb-4">
-							Ask me about your music preferences, get recommendations, or chat
-							about your favorite artists!
-						</p>
-						<div className="space-y-2">
-							<p className="text-sm text-gray-400">Try asking:</p>
-							<ul className="text-sm text-gray-400 space-y-1 ml-4">
-								<li>• "What are my top tracks?"</li>
-								<li>• "Recommend music similar to [artist]"</li>
-								<li>• "Find new music based on my taste"</li>
-							</ul>
-						</div>
-					</div>
+			{/* Catchphrase */}
+			<div className="text-center mb-4">
+				<h2 className="text-xl font-semibold text-white adamina-regular">
+					what’s on the playlist today?
+				</h2>
+			</div>
 
-					{/* Simple chat input for now */}
-					<div className="flex space-x-2">
-						<input
-							type="text"
-							placeholder="Ask me about music..."
-							className="flex-1 bg-black border border-white text-white p-3 adamina-regular focus:outline-none focus:shadow-[2px_2px_0_white]"
-						/>
-						<button className="bg-black border border-white text-white adamina-regular px-6 py-3 transition-all duration-200 hover:shadow-[2px_2px_0_white] hover:translate-x-[-1px] hover:translate-y-[-1px]">
-							Send
-						</button>
-					</div>
+			{/* Chat content (scrollable area) */}
+			<div className="flex-1 overflow-y-auto px-4 pb-32 container mx-auto max-w-4xl space-y-4">
+				{/* Example chat messages */}
+
+				{/* Add more chat messages dynamically here */}
+			</div>
+
+			{/* Sticky input box at the bottom */}
+			<div className="sticky adamina-regular bottom-0 left-0 w-full bg-black  z-50">
+				<div className="container mx-auto px-4 py-4 max-w-4xl flex space-x-2">
+					<Input type="email" placeholder="Ask something" />
+					<Button
+						type="submit"
+						variant="outline"
+						className="border-white text-black hover:shadow-[2px_2px_0_white] hover:translate-x-[-1px] hover:translate-y-[-1px]"
+					>
+						Send
+					</Button>
 				</div>
 			</div>
 		</div>
 	);
+  
 }
-
 export default App;
