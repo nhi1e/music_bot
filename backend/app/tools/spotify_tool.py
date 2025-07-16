@@ -24,10 +24,12 @@ def get_spotify_client():
 
 @tool
 def get_top_tracks(time_range: str = "medium_term", limit: int = 10) -> str:
-    """Get user's top tracks from Spotify.
+    """Get user's TOP/MOST LISTENED TO tracks from Spotify. Use this for queries about "top tracks", "favorite tracks", "most played tracks", or "best tracks".
+    
+    This returns the user's most frequently played tracks over a time period, NOT recently played tracks.
     
     Args:
-        time_range: Time period for top tracks ('short_term', 'medium_term', 'long_term')
+        time_range: Time period for top tracks ('short_term'=last 4 weeks, 'medium_term'=last 6 months, 'long_term'=all time)
         limit: Number of tracks to return (1-50)
     """
     try:
@@ -38,9 +40,15 @@ def get_top_tracks(time_range: str = "medium_term", limit: int = 10) -> str:
             return "No top tracks found."
         
         tracks = []
+        image_urls = []
         for idx, track in enumerate(results['items'], 1):
             artist_names = ', '.join([artist['name'] for artist in track['artists']])
             tracks.append(f"{idx}. {track['name']} by {artist_names}")
+            
+            # Add album image URL if available
+            if track['album']['images'] and len(track['album']['images']) > 0:
+                image_url = track['album']['images'][0]['url']  # Get the largest image
+                image_urls.append(f"![Track: {track['name']}]({image_url})")
         
         time_period = {
             'short_term': 'last 4 weeks',
@@ -48,7 +56,11 @@ def get_top_tracks(time_range: str = "medium_term", limit: int = 10) -> str:
             'long_term': 'all time'
         }.get(time_range, time_range)
         
-        return f"Your top {len(tracks)} tracks ({time_period}):\n" + "\n".join(tracks)
+        response = f"Your top {len(tracks)} tracks ({time_period}):\n" + "\n".join(tracks)
+        if image_urls:
+            response += "\n\n" + "\n".join(image_urls[:5])  # Limit to 5 images
+        
+        return response
         
     except Exception as e:
         return f"Error fetching top tracks: {str(e)}"
@@ -75,7 +87,9 @@ def get_playlist_names() -> str:
 
 @tool
 def get_recently_played(limit: int = 10) -> str:
-    """Get user's recently played tracks from Spotify.
+    """Get user's RECENTLY PLAYED tracks from Spotify (chronological order by play time). Use this ONLY for queries specifically asking about "recently played", "last played", or "what did I listen to recently".
+    
+    This returns tracks in the order they were played, NOT the most frequently played tracks.
     
     Args:
         limit: Number of recent tracks to return (1-50)
@@ -115,12 +129,22 @@ def search_tracks(query: str, limit: int = 10) -> str:
             return f"No tracks found for '{query}'."
         
         tracks = []
+        image_urls = []
         for idx, track in enumerate(results['tracks']['items'], 1):
             artist_names = ', '.join([artist['name'] for artist in track['artists']])
             album_name = track['album']['name']
             tracks.append(f"{idx}. {track['name']} by {artist_names} (from {album_name})")
+            
+            # Add album image URL if available
+            if track['album']['images'] and len(track['album']['images']) > 0:
+                image_url = track['album']['images'][0]['url']  # Get the largest image
+                image_urls.append(f"![Track: {track['name']}]({image_url})")
         
-        return f"Search results for '{query}':\n" + "\n".join(tracks)
+        response = f"Search results for '{query}':\n" + "\n".join(tracks)
+        if image_urls:
+            response += "\n\n" + "\n".join(image_urls[:5])  # Limit to 5 images
+        
+        return response
         
     except Exception as e:
         return f"Error searching tracks: {str(e)}"
@@ -140,12 +164,22 @@ def get_saved_tracks(limit: int = 20) -> str:
             return "No saved tracks found."
         
         tracks = []
+        image_urls = []
         for idx, item in enumerate(results['items'], 1):
             track = item['track']
             artist_names = ', '.join([artist['name'] for artist in track['artists']])
             tracks.append(f"{idx}. {track['name']} by {artist_names}")
+            
+            # Add album image URL if available
+            if track['album']['images'] and len(track['album']['images']) > 0 and len(image_urls) < 5:
+                image_url = track['album']['images'][0]['url']
+                image_urls.append(f"![Track: {track['name']}]({image_url})")
         
-        return f"Your {len(tracks)} saved tracks:\n" + "\n".join(tracks)
+        response = f"Your {len(tracks)} saved tracks:\n" + "\n".join(tracks)
+        if image_urls:
+            response += "\n\n" + "\n".join(image_urls[:5])
+        
+        return response
         
     except Exception as e:
         return f"Error fetching saved tracks: {str(e)}"
@@ -165,6 +199,7 @@ def get_playlists_with_details(limit: int = 50) -> str:
             return "No playlists found."
         
         playlists = []
+        image_urls = []
         for playlist in results['items']:
             # Get more detailed playlist info
             playlist_details = sp.playlist(playlist['id'])
@@ -184,8 +219,17 @@ def get_playlists_with_details(limit: int = 50) -> str:
                 f"  - ID: {playlist['id']}\n"
                 f"  - Description: {description}"
             )
+            
+            # Add playlist image if available
+            if playlist['images'] and len(playlist['images']) > 0 and len(image_urls) < 5:
+                image_url = playlist['images'][0]['url']
+                image_urls.append(f"![Playlist: {playlist['name']}]({image_url})")
         
-        return f"Your {len(playlists)} playlists with details:\n\n" + "\n\n".join(playlists)
+        response = f"Your {len(playlists)} playlists with details:\n\n" + "\n\n".join(playlists)
+        if image_urls:
+            response += "\n\n" + "\n".join(image_urls[:5])
+        
+        return response
         
     except Exception as e:
         return f"Error fetching playlist details: {str(e)}"
@@ -390,6 +434,8 @@ def search_artist_info(artist_name: str) -> str:
         
         # Get artist details
         artist_info = []
+        image_urls = []
+        
         artist_info.append(f"**{artist['name']}**")
         artist_info.append(f"Followers: {artist['followers']['total']:,}")
         artist_info.append(f"Popularity: {artist['popularity']}/100")
@@ -397,12 +443,22 @@ def search_artist_info(artist_name: str) -> str:
         if artist['genres']:
             artist_info.append(f"Genres: {', '.join(artist['genres'])}")
         
+        # Add artist image
+        if artist['images'] and len(artist['images']) > 0:
+            image_url = artist['images'][0]['url']
+            image_urls.append(f"![Artist: {artist['name']}]({image_url})")
+        
         # Get top tracks
         top_tracks = sp.artist_top_tracks(artist_id, country='US')
         if top_tracks['tracks']:
             artist_info.append(f"\n**Top Tracks:**")
             for idx, track in enumerate(top_tracks['tracks'][:5], 1):
                 artist_info.append(f"{idx}. {track['name']} (from {track['album']['name']})")
+                
+                # Add album images from top tracks
+                if track['album']['images'] and len(track['album']['images']) > 0 and len(image_urls) < 5:
+                    image_url = track['album']['images'][0]['url']
+                    image_urls.append(f"![Album: {track['album']['name']}]({image_url})")
         
         # Get albums
         albums = sp.artist_albums(artist_id, album_type='album', limit=5)
@@ -411,8 +467,17 @@ def search_artist_info(artist_name: str) -> str:
             for album in albums['items']:
                 release_date = album.get('release_date', 'Unknown')
                 artist_info.append(f"• {album['name']} ({release_date})")
+                
+                # Add album images
+                if album['images'] and len(album['images']) > 0 and len(image_urls) < 5:
+                    image_url = album['images'][0]['url']
+                    image_urls.append(f"![Album: {album['name']}]({image_url})")
         
-        return "\n".join(artist_info)
+        response = "\n".join(artist_info)
+        if image_urls:
+            response += "\n\n" + "\n".join(image_urls[:5])
+        
+        return response
         
     except Exception as e:
         return f"Error searching for artist: {str(e)}"
@@ -433,17 +498,20 @@ def get_top_artists(time_range: str = "medium_term", limit: int = 10) -> str:
             return "No top artists found."
         
         artists = []
+        image_urls = []
         for idx, artist in enumerate(results['items'], 1):
             followers = artist['followers']['total']
             popularity = artist['popularity']
             genres = ', '.join(artist['genres'][:3]) if artist['genres'] else 'No genres listed'
             
             artists.append(
-                f"{idx}. **{artist['name']}**\n"
-                f"    - Followers: {followers:,}\n"
-                f"    - Popularity: {popularity}/100\n"
-                f"    - Genres: {genres}"
+                f"{idx}. **{artist['name']}** - {genres if genres != 'No genres listed' else 'Popular and soulful, but no specific genres listed'}."
             )
+            
+            # Add artist image URL if available
+            if artist['images'] and len(artist['images']) > 0:
+                image_url = artist['images'][0]['url']  # Get the largest image
+                image_urls.append(f"![Artist: {artist['name']}]({image_url})")
         
         time_period = {
             'short_term': 'last 4 weeks',
@@ -451,7 +519,15 @@ def get_top_artists(time_range: str = "medium_term", limit: int = 10) -> str:
             'long_term': 'all time'
         }.get(time_range, time_range)
         
-        return f"Your top {len(artists)} artists ({time_period}):\n\n" + "\n\n".join(artists)
+        response = f"Here are your top {len(artists)} artists from the {time_period}:\n\n" + "\n".join(artists)
+        
+        # Add images for top 5 artists
+        if image_urls:
+            response += "\n\n" + "\n".join(image_urls[:5])
+        
+        response += "\n\nQuite an eclectic mix of genres and styles! 🎧 Any artist here you'd like to delve deeper into or find similar recommendations for?"
+        
+        return response
         
     except Exception as e:
         return f"Error fetching top artists: {str(e)}"

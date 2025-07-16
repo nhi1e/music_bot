@@ -9,6 +9,13 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+	Carousel,
+	CarouselContent,
+	CarouselItem,
+	CarouselNext,
+	CarouselPrevious,
+} from "@/components/ui/carousel";
 import ReactMarkdown from "react-markdown";
 
 interface SpotifyUser {
@@ -24,6 +31,12 @@ interface ChatMessage {
 	content: string;
 	role: "user" | "assistant";
 	timestamp: Date;
+	spotifyImages?: Array<{
+		url: string;
+		title?: string;
+		subtitle?: string;
+		type?: "album" | "artist" | "playlist" | "track";
+	}>;
 }
 
 function App() {
@@ -44,8 +57,141 @@ function App() {
 			container.scrollTop = container.scrollHeight + 3000;
 		}
 		if (messagesEndRef.current) {
-			messagesEndRef.current.scrollIntoView({ block: 'end', inline: 'nearest' });
+			messagesEndRef.current.scrollIntoView({
+				block: "end",
+				inline: "nearest",
+			});
 		}
+	};
+
+	// Extract Spotify images from response and return both images and cleaned text
+	const extractSpotifyImages = (responseText: string) => {
+		console.log("🔍 Extracting Spotify images from response:", responseText);
+		console.log("🔍 Response text length:", responseText.length);
+
+		const images: Array<{
+			url: string;
+			title?: string;
+			subtitle?: string;
+			type?: "album" | "artist" | "playlist" | "track";
+		}> = [];
+
+		let cleanedText = responseText;
+
+		try {
+			// Look for markdown image patterns to extract URLs and remove from text
+			const markdownImagePatterns = [
+				/!\[.*?\]\((https:\/\/[^)]+)\)/g,
+				/!\[Artist:.*?\]\((https:\/\/[^)]+)\)/g,
+				/!\[Track:.*?\]\((https:\/\/[^)]+)\)/g,
+				/!\[Album:.*?\]\((https:\/\/[^)]+)\)/g,
+			];
+
+			const foundUrls: string[] = [];
+			const markdownMatches: string[] = [];
+
+			markdownImagePatterns.forEach((pattern, index) => {
+				console.log(
+					`📸 Testing markdown pattern ${index + 1}:`,
+					pattern.source
+				);
+				const matches = responseText.match(pattern);
+				console.log(`📸 Pattern ${index + 1} matches:`, matches);
+				if (matches) {
+					markdownMatches.push(...matches);
+					const urlMatches = matches
+						.map((match) => {
+							console.log("📸 Processing match:", match);
+							const urlMatch = match.match(/\(([^)]+)\)/);
+							console.log("📸 Extracted URL:", urlMatch ? urlMatch[1] : null);
+							return urlMatch ? urlMatch[1] : null;
+						})
+						.filter((url): url is string => url !== null);
+					foundUrls.push(...urlMatches);
+				}
+			});
+
+			// Remove all markdown image syntax from the text
+			markdownMatches.forEach((match) => {
+				cleanedText = cleanedText.replace(match, "").replace(/\n\n\n/g, "\n\n");
+			});
+
+			// Also look for direct Spotify URLs (fallback)
+			const directUrlPatterns = [
+				/https:\/\/i\.scdn\.co\/image\/[a-f0-9]{32}/g,
+				/https:\/\/mosaic\.scdn\.co\/640\/[a-f0-9]{32}/g,
+				/https:\/\/lineup-images\.scdn\.co\/[^"'\s]+/g,
+				/https:\/\/.*\.spotifycdn\.com\/[^"'\s]+/g,
+			];
+
+			directUrlPatterns.forEach((pattern) => {
+				const matches = responseText.match(pattern);
+				if (matches) {
+					foundUrls.push(...matches);
+				}
+			});
+
+			console.log("🎵 Found image URLs:", foundUrls);
+
+			if (foundUrls.length > 0) {
+				// Remove duplicates and limit to 5 images
+				const uniqueUrls = foundUrls.filter(
+					(url, index) => foundUrls.indexOf(url) === index
+				);
+				const limitedUrls = uniqueUrls.slice(0, 5);
+
+				console.log("✨ Processing unique URLs:", limitedUrls);
+
+				limitedUrls.forEach((url, index) => {
+					console.log(`🖼️ Processing URL ${index + 1}:`, url);
+
+					// Try to determine the type based on URL patterns
+					let type: "album" | "artist" | "playlist" | "track" = "album";
+
+					if (url.includes("mosaic")) {
+						type = "playlist";
+						console.log("🎵 Detected playlist type");
+					} else if (url.includes("lineup-images")) {
+						type = "artist";
+						console.log("🎤 Detected artist type");
+					} else if (url.includes("i.scdn.co")) {
+						// Check the original response to see if this was an artist or track image
+						const urlIndex = responseText.indexOf(url);
+						if (urlIndex !== -1) {
+							const contextBefore = responseText.substring(
+								Math.max(0, urlIndex - 100),
+								urlIndex
+							);
+							if (contextBefore.includes("Artist:")) {
+								type = "artist";
+								console.log("🎤 Detected artist type from context");
+							} else if (contextBefore.includes("Track:")) {
+								type = "track";
+								console.log("🎵 Detected track type from context");
+							}
+						}
+					}
+
+					images.push({
+						url,
+						type,
+					});
+
+					console.log(
+						`✅ Added image: type=${type}, url=${url.substring(0, 50)}...`
+					);
+				});
+			} else {
+				console.log("❌ No image URLs found in response");
+			}
+
+			console.log("🖼️ Final extracted images:", images);
+			console.log("📝 Cleaned text:", cleanedText);
+		} catch (error) {
+			console.error("❌ Error extracting Spotify images:", error);
+		}
+
+		return { images, cleanedText };
 	};
 
 	useEffect(() => {
@@ -109,13 +255,13 @@ function App() {
 				const container = chatContainerRef.current;
 				container.scrollTop = container.scrollHeight + 1000; // Extra padding to ensure full scroll
 			}
-			
+
 			// Method 2: Scroll to end element with multiple attempts
 			if (messagesEndRef.current) {
-				messagesEndRef.current.scrollIntoView({ 
-					behavior: 'smooth',
-					block: 'end',
-					inline: 'nearest'
+				messagesEndRef.current.scrollIntoView({
+					behavior: "smooth",
+					block: "end",
+					inline: "nearest",
 				});
 			}
 		};
@@ -126,9 +272,9 @@ function App() {
 			setTimeout(scrollToBottom, 150),
 			setTimeout(scrollToBottom, 300),
 			setTimeout(forceScrollToBottom, 500), // Use utility function for final scroll
-			setTimeout(forceScrollToBottom, 800)  // Extra attempt
+			setTimeout(forceScrollToBottom, 800), // Extra attempt
 		];
-		
+
 		return () => timeouts.forEach(clearTimeout);
 	}, [messages, isTyping]);
 
@@ -166,16 +312,21 @@ function App() {
 		// Aggressive scroll to bottom after adding user message
 		setTimeout(() => {
 			if (chatContainerRef.current) {
-				chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight + 1000;
+				chatContainerRef.current.scrollTop =
+					chatContainerRef.current.scrollHeight + 1000;
 			}
 			if (messagesEndRef.current) {
-				messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+				messagesEndRef.current.scrollIntoView({
+					behavior: "smooth",
+					block: "end",
+				});
 			}
 		}, 50);
-		
+
 		setTimeout(() => {
 			if (chatContainerRef.current) {
-				chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight + 1000;
+				chatContainerRef.current.scrollTop =
+					chatContainerRef.current.scrollHeight + 1000;
 			}
 		}, 200);
 
@@ -193,35 +344,52 @@ function App() {
 			}
 
 			const data = await response.json();
+			const responseContent =
+				data.response || "Sorry, I couldn't process your request.";
+			const { images: spotifyImages, cleanedText } =
+				extractSpotifyImages(responseContent);
+
+			console.log("🎵 Response from backend:", responseContent);
+			console.log("🖼️ Extracted Spotify images:", spotifyImages);
+			console.log("📝 Cleaned text:", cleanedText);
 
 			const aiMessage: ChatMessage = {
 				id: (Date.now() + 1).toString(),
-				content: data.response || "Sorry, I couldn't process your request.",
+				content: cleanedText, // Use cleaned text without image markdown
 				role: "assistant",
 				timestamp: new Date(),
+				spotifyImages: spotifyImages.length > 0 ? spotifyImages : undefined,
 			};
 
+			console.log("💬 AI message with images:", aiMessage);
+
 			setMessages((prev) => [...prev, aiMessage]);
-			
+
 			// Aggressive scroll to bottom after adding AI message
 			setTimeout(() => {
 				if (chatContainerRef.current) {
-					chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight + 1000;
+					chatContainerRef.current.scrollTop =
+						chatContainerRef.current.scrollHeight + 1000;
 				}
 				if (messagesEndRef.current) {
-					messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+					messagesEndRef.current.scrollIntoView({
+						behavior: "smooth",
+						block: "end",
+					});
 				}
 			}, 50);
-			
+
 			setTimeout(() => {
 				if (chatContainerRef.current) {
-					chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight + 1000;
+					chatContainerRef.current.scrollTop =
+						chatContainerRef.current.scrollHeight + 1000;
 				}
 			}, 200);
-			
+
 			setTimeout(() => {
 				if (chatContainerRef.current) {
-					chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight + 1000;
+					chatContainerRef.current.scrollTop =
+						chatContainerRef.current.scrollHeight + 1000;
 				}
 			}, 500);
 		} catch (error) {
@@ -234,20 +402,25 @@ function App() {
 				timestamp: new Date(),
 			};
 			setMessages((prev) => [...prev, errorMessage]);
-			
+
 			// Aggressive scroll to bottom after adding error message
 			setTimeout(() => {
 				if (chatContainerRef.current) {
-					chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight + 1000;
+					chatContainerRef.current.scrollTop =
+						chatContainerRef.current.scrollHeight + 1000;
 				}
 				if (messagesEndRef.current) {
-					messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+					messagesEndRef.current.scrollIntoView({
+						behavior: "smooth",
+						block: "end",
+					});
 				}
 			}, 50);
-			
+
 			setTimeout(() => {
 				if (chatContainerRef.current) {
-					chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight + 1000;
+					chatContainerRef.current.scrollTop =
+						chatContainerRef.current.scrollHeight + 1000;
 				}
 			}, 200);
 		} finally {
@@ -397,8 +570,9 @@ function App() {
 					messages.map((message) => (
 						<div
 							key={message.id}
-							className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+							className={`flex flex-col ${message.role === "user" ? "items-end" : "items-start"} space-y-2`}
 						>
+							{/* Text Message */}
 							<div
 								className={`max-w-[70%] p-4 rounded-lg adamina-regular text-sm ${
 									message.role === "user"
@@ -413,6 +587,51 @@ function App() {
 									{message.timestamp.toLocaleTimeString()}
 								</div>
 							</div>
+
+							{/* Spotify Images Carousel - Outside text bubble */}
+							{message.spotifyImages && message.spotifyImages.length > 0 && (
+								<div
+									className={`w-full mt-2 ${
+										message.role === "user"
+											? "mr-4 self-end"
+											: "ml-4 self-start"
+									}`}
+								>
+									<div className="max-w-max relative">
+										<Carousel className="w-full">
+											<CarouselContent className="-ml-1">
+												{message.spotifyImages.map((image, index) => (
+													<CarouselItem
+														key={index}
+														className="pl-1 md:basis-1/2 lg:basis-1/3"
+													>
+														<div className="p-1">
+															<div className="aspect-square rounded-md overflow-hidden ">
+																<img
+																	src={image.url}
+																	alt={image.title || "Spotify"}
+																	className="w-full h-full object-cover"
+																	onError={(e) => {
+																		const target = e.target as HTMLImageElement;
+																		target.style.display = "none";
+																	}}
+																/>
+															</div>
+														</div>
+													</CarouselItem>
+												))}
+											</CarouselContent>
+
+											{message.spotifyImages.length > 1 && (
+												<>
+													<CarouselPrevious className="h-6 w-6 -left-3 text-white border-white hover:bg-white hover:text-black" />
+													<CarouselNext className="h-6 w-6 -right-3 text-white  hover:bg-white hover:text-black" />
+												</>
+											)}
+										</Carousel>
+									</div>
+								</div>
+							)}
 						</div>
 					))
 				)}
