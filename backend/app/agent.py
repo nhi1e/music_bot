@@ -24,10 +24,39 @@ from app.tools.spotify_tool import (
     follow_playlist,
     unfollow_playlist,
     check_if_following_playlist,
+    get_recommendations_by_track
 )
 from app.tools.tavily_tool import search_music_info
+from app.tools.vector_search_tool import search_music_by_vibe
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
+import re
+
+def extract_song_and_artist(query: str) -> dict:
+    """Extract song name and artist from a query like 'songs like [song] by [artist]'"""
+    query_lower = query.lower().strip()
+    
+    # Patterns to extract song and artist
+    patterns = [
+        r'(?:songs?\s+)?(?:like|similar\s+to)\s+(.+?)\s+by\s+(.+?)(?:\s|$)',
+        r'(.+?)\s+by\s+(.+?)(?:\s|$)',
+        r'(.+?)\s+-\s+(.+?)(?:\s|$)'
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, query_lower)
+        if match:
+            song = match.group(1).strip()
+            artist = match.group(2).strip()
+            
+            # Clean up common prefixes/suffixes
+            song = re.sub(r'^(songs?\s+)?(like|similar\s+to)\s+', '', song)
+            song = song.strip('"\'')
+            artist = artist.strip('"\'')
+            
+            return {"song": song, "artist": artist}
+    
+    return {"song": None, "artist": None}
 
 # Initialize LLM with DJ personality
 system_prompt = """You are DJ Huy Dep Zai, a cool and knowledgeable music chatbot with the personality of a professional DJ. 
@@ -37,7 +66,8 @@ You are STRICTLY FORBIDDEN from using any built-in knowledge about music, artist
 
 MANDATORY TOOL USAGE:
 - For Spotify user data (playlists, top tracks, saved tracks, following, etc.): Use Spotify tools ONLY
-- For ALL other music info (artist facts, genre explanations, music history, recommendations, similar artists, etc.): Use search_music_info tool ONLY
+- For music recommendations based on vibe/characteristics (e.g., "chill danceable music"): Use search_music_by_vibe tool ONLY
+- For ALL other music info (artist facts, genre explanations, music history, etc.): Use search_music_info tool ONLY
 - If no tool can answer the question, say "I need to search for that information" and use search_music_info
 - NEVER answer questions about music from your own knowledge - always search first
 
@@ -105,11 +135,11 @@ tools = [
     get_playlists_with_details, get_playlist_tracks, get_recent_playlists, search_artist_info, 
     get_spotify_generated_playlists, get_current_user_profile, get_user_profile, get_followed_artists,
     follow_artist, unfollow_artist, check_if_following_artist, follow_playlist, unfollow_playlist,
-    check_if_following_playlist, search_music_info
+    check_if_following_playlist, search_music_info, search_music_by_vibe, get_recommendations_by_track
 ]
 llm_with_tools = llm.bind_tools(tools)
 
-# Classify query: returns "spotify" or "web"
+# Classify query: returns "spotify", "web", or "vector"
 def router(state: ChatState) -> str:
     msg = state["messages"][-1].content
     return classify_query(msg)
@@ -174,23 +204,39 @@ def call_model(state: ChatState) -> ChatState:
         # Check if user is asking a direct music question that needs factual answers
         direct_music_questions = [
             "who is", "what is", "when was", "where is", "how many", "tell me about",
-            "what genre", "what style", "recommend", "similar to", "like"
+            "what genre", "what style"
+        ]
+        
+        # Check if user is asking for music recommendations (should use vector search)
+        recommendation_questions = [
+            "recommend", "similar to", "like", "find me", "give me", "suggest", 
+            "music for", "songs for", "tracks that", "chill", "danceable", "upbeat"
         ]
         
         needs_tool_usage = (
             not is_conversational and 
             (any(indicator in content for indicator in music_fact_indicators) or 
-             any(question in user_query for question in direct_music_questions))
+             any(question in user_query for question in direct_music_questions) or
+             any(question in user_query for question in recommendation_questions))
         )
         
         if needs_tool_usage:
-            # Force the model to use search_music_info instead
+            # Determine which tool to use based on query classification
+            query_type = classify_query(user_query)
             original_user_query = state["messages"][-1].content
-            print(f"[SAFETY] Forcing tool usage for query: {original_user_query}")
+            print(f"[SAFETY] Forcing tool usage for query: {original_user_query} (type: {query_type})")
             
-            # Create a tool call for search_music_info
+            # Choose the appropriate tool based on classification
+            if query_type == "vector":
+                tool_name = "search_music_by_vibe"
+            elif query_type == "spotify":
+                tool_name = "search_music_info"  # Fallback, though this shouldn't happen often
+            else:  # web
+                tool_name = "search_music_info"
+            
+            # Create a tool call
             tool_call = {
-                "name": "search_music_info",
+                "name": tool_name,
                 "args": {"query": original_user_query},
                 "id": f"forced_search_{len(state['messages'])}"
             }
@@ -218,6 +264,45 @@ def call_model(state: ChatState) -> ChatState:
                 # Ensure tool output is never empty or None
                 if not tool_output or str(tool_output).strip() == "":
                     tool_output = f"The {tool_name} tool completed but returned no results."
+                
+                # Special handling for vector search tool returning "specific_song_not_found"
+                if tool_name == "search_music_by_vibe" and isinstance(tool_output, str):
+                    try:
+                        import json
+                        parsed_output = json.loads(tool_output)
+                        if (isinstance(parsed_output, dict) and 
+                            parsed_output.get("error") == "specific_song_not_found"):
+                            
+                            print("[AUTO-FALLBACK] Vector search found specific song not in DB, calling Spotify API...")
+                            
+                            # Extract song and artist from the original query
+                            original_query = tool_args.get("query", "")
+                            song_info = extract_song_and_artist(original_query)
+                            
+                            if song_info["song"] and song_info["artist"]:
+                                # Import Spotify recommendation tool
+                                from app.tools.spotify_tool import get_recommendations_by_track
+                                
+                                try:
+                                    spotify_output = get_recommendations_by_track.invoke({
+                                        "track_name": song_info["song"],
+                                        "artist_name": song_info["artist"],
+                                        "limit": tool_args.get("num_results", 10)
+                                    })
+                                    
+                                    # Replace the "not found" message with actual Spotify recommendations
+                                    tool_output = f"I found that song on Spotify! Here are some similar recommendations:\n\n{spotify_output}"
+                                    print("[AUTO-FALLBACK] Successfully got Spotify recommendations")
+                                    
+                                except Exception as spotify_error:
+                                    print(f"[AUTO-FALLBACK] Spotify fallback failed: {spotify_error}")
+                                    tool_output = f"I couldn't find '{song_info['song']}' by '{song_info['artist']}' in the music database, and I'm having trouble accessing Spotify recommendations right now. You might want to check the song title or try a different approach."
+                            else:
+                                # Could not parse song/artist, use original error message
+                                tool_output = parsed_output.get("message", "Song not found in database.")
+                    except:
+                        # If JSON parsing fails, use original tool output
+                        pass
                 
                 # Step 3: Respond with tool output
                 state["messages"].append(
@@ -288,6 +373,7 @@ builder = StateGraph(ChatState)
 builder.add_node("router", lambda x: x)  # just passes state through  
 builder.add_node("spotify", call_model)
 builder.add_node("web", call_model)
+builder.add_node("vector", call_model)
 
 # Set entry point
 builder.set_entry_point("router")
@@ -298,13 +384,15 @@ builder.add_conditional_edges(
     router,
     {
         "spotify": "spotify",
-        "web": "web"
+        "web": "web",
+        "vector": "vector"
     }
 )
 
 # Add edges to END
 builder.add_edge("spotify", END)
 builder.add_edge("web", END)
+builder.add_edge("vector", END)
 
 # Compile graph with memory
 graph = builder.compile(checkpointer=memory)
