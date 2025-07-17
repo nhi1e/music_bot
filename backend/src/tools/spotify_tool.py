@@ -76,11 +76,21 @@ def get_playlist_names() -> str:
             return "No playlists found."
         
         playlists = []
+        image_urls = []
         for playlist in results['items']:
             track_count = playlist['tracks']['total']
             playlists.append(f"• {playlist['name']} ({track_count} tracks)")
+            
+            # Add playlist image if available
+            if playlist['images'] and len(playlist['images']) > 0 and len(image_urls) < 5:
+                image_url = playlist['images'][0]['url']
+                image_urls.append(f"![Playlist: {playlist['name']}]({image_url})")
         
-        return f"Your playlists:\n" + "\n".join(playlists)
+        response = f"Your playlists:\n" + "\n".join(playlists)
+        if image_urls:
+            response += "\n\n" + "\n".join(image_urls[:5])  # Limit to 5 images
+        
+        return response
         
     except Exception as e:
         return f"Error fetching playlists: {str(e)}"
@@ -102,13 +112,23 @@ def get_recently_played(limit: int = 10) -> str:
             return "No recently played tracks found."
         
         tracks = []
+        image_urls = []
         for idx, item in enumerate(results['items'], 1):
             track = item['track']
             artist_names = ', '.join([artist['name'] for artist in track['artists']])
             played_at = item['played_at'][:10]  # Just the date
             tracks.append(f"{idx}. {track['name']} by {artist_names} (played on {played_at})")
+            
+            # Add album image URL if available
+            if track['album']['images'] and len(track['album']['images']) > 0 and len(image_urls) < 5:
+                image_url = track['album']['images'][0]['url']  # Get the largest image
+                image_urls.append(f"![Track: {track['name']}]({image_url})")
         
-        return f"Your {len(tracks)} recently played tracks:\n" + "\n".join(tracks)
+        response = f"Your {len(tracks)} recently played tracks:\n" + "\n".join(tracks)
+        if image_urls:
+            response += "\n\n" + "\n".join(image_urls[:5])  # Limit to 5 images
+        
+        return response
         
     except Exception as e:
         return f"Error fetching recently played tracks: {str(e)}"
@@ -291,12 +311,18 @@ def get_playlist_tracks(playlist_name: str = "", playlist_id: str = "", limit: i
             return f"The playlist '{playlist_info['name']}' exists but contains no tracks."
         
         tracks = []
+        image_urls = []
         valid_tracks = 0
         for idx, item in enumerate(tracks_result['items'], 1):
             if item['track'] and item['track']['name']:  # Some tracks might be None
                 track = item['track']
                 artist_names = ', '.join([artist['name'] for artist in track['artists']])
                 album_name = track['album']['name']
+                
+                # Add album image URL if available
+                if track['album']['images'] and len(track['album']['images']) > 0 and len(image_urls) < 5:
+                    image_url = track['album']['images'][0]['url']
+                    image_urls.append(f"![Track: {track['name']}]({image_url})")
                 
                 # Get date added if available
                 added_at = item.get('added_at', '')
@@ -320,7 +346,11 @@ def get_playlist_tracks(playlist_name: str = "", playlist_id: str = "", limit: i
         if playlist_info.get('description'):
             playlist_details += f"Description: {playlist_info['description']}\n"
         
-        return f"{playlist_details}\n**Tracks (showing {valid_tracks}):**\n" + "\n".join(tracks)
+        response = f"{playlist_details}\n**Tracks (showing {valid_tracks}):**\n" + "\n".join(tracks)
+        if image_urls:
+            response += "\n\n" + "\n".join(image_urls[:5])  # Limit to 5 images
+        
+        return response
         
     except Exception as e:
         error_msg = f"Error fetching playlist tracks: {str(e)}"
@@ -594,6 +624,8 @@ def get_current_user_profile() -> str:
         user = sp.current_user()
         
         profile_info = []
+        image_urls = []
+        
         profile_info.append(f"**{user.get('display_name', 'No display name')}** (@{user['id']})")
         profile_info.append(f"Followers: {user['followers']['total']:,}")
         
@@ -605,8 +637,17 @@ def get_current_user_profile() -> str:
         
         if user.get('external_urls', {}).get('spotify'):
             profile_info.append(f"Profile URL: {user['external_urls']['spotify']}")
+            
+        # Add user profile image if available
+        if user.get('images') and len(user['images']) > 0:
+            image_url = user['images'][0]['url']
+            image_urls.append(f"![Profile: {user.get('display_name', user['id'])}]({image_url})")
         
-        return "\n".join(profile_info)
+        response = "\n".join(profile_info)
+        if image_urls:
+            response += "\n\n" + "\n".join(image_urls)
+        
+        return response
         
     except Exception as e:
         error_msg = f"Error fetching user profile: {str(e)}"
@@ -625,13 +666,24 @@ def get_user_profile(user_id: str) -> str:
         user = sp.user(user_id)
         
         profile_info = []
+        image_urls = []
+        
         profile_info.append(f"**{user.get('display_name', 'No display name')}** (@{user['id']})")
         profile_info.append(f"Followers: {user['followers']['total']:,}")
         
         if user.get('external_urls', {}).get('spotify'):
             profile_info.append(f"Profile URL: {user['external_urls']['spotify']}")
+            
+        # Add user profile image if available
+        if user.get('images') and len(user['images']) > 0:
+            image_url = user['images'][0]['url']
+            image_urls.append(f"![Profile: {user.get('display_name', user['id'])}]({image_url})")
         
-        return "\n".join(profile_info)
+        response = "\n".join(profile_info)
+        if image_urls:
+            response += "\n\n" + "\n".join(image_urls)
+        
+        return response
         
     except Exception as e:
         error_msg = f"Error fetching user profile for '{user_id}': {str(e)}"
@@ -653,6 +705,7 @@ def get_followed_artists(limit: int = 20) -> str:
             return "You're not following any artists yet."
         
         artists = []
+        image_urls = []
         for idx, artist in enumerate(results['artists']['items'], 1):
             followers = artist['followers']['total']
             genres = ', '.join(artist['genres'][:2]) if artist['genres'] else 'No genres listed'
@@ -662,8 +715,17 @@ def get_followed_artists(limit: int = 20) -> str:
                 f"    - Followers: {followers:,}\n"
                 f"    - Genres: {genres}"
             )
+            
+            # Add artist image if available
+            if artist['images'] and len(artist['images']) > 0 and len(image_urls) < 5:
+                image_url = artist['images'][0]['url']
+                image_urls.append(f"![Artist: {artist['name']}]({image_url})")
         
-        return f"Artists you're following ({len(artists)} shown):\n\n" + "\n\n".join(artists)
+        response = f"Artists you're following ({len(artists)} shown):\n\n" + "\n\n".join(artists)
+        if image_urls:
+            response += "\n\n" + "\n".join(image_urls[:5])
+        
+        return response
         
     except Exception as e:
         error_msg = f"Error fetching followed artists: {str(e)}"

@@ -1,9 +1,9 @@
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import HumanMessage, ToolMessage, AIMessage, SystemMessage
-from app.memory import memory
-from app.schema import ChatState
-from app.classifier import classify_query
-from app.tools.spotify_tool import (
+from .memory import memory
+from .schema import ChatState
+from .classifier import classify_query
+from ..tools.spotify_tool import (
     get_top_tracks, 
     get_top_artists,
     get_playlist_names, 
@@ -26,8 +26,8 @@ from app.tools.spotify_tool import (
     check_if_following_playlist,
     get_recommendations_by_track
 )
-from app.tools.tavily_tool import search_music_info
-from app.tools.vector_search_tool import search_music_by_vibe
+from ..tools.tavily_tool import search_music_info
+from ..tools.vector_search_tool import search_music_by_vibe
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
 import re
@@ -142,7 +142,10 @@ llm_with_tools = llm.bind_tools(tools)
 # Classify query: returns "spotify", "web", or "vector"
 def router(state: ChatState) -> str:
     msg = state["messages"][-1].content
-    return classify_query(msg)
+    classification = classify_query(msg)
+    
+    # Removed intent-based logging - now only logging based on actual tool execution
+    return classification
 
 # Handle tool invocation and LLM call
 
@@ -224,7 +227,16 @@ def call_model(state: ChatState) -> ChatState:
             # Determine which tool to use based on query classification
             query_type = classify_query(user_query)
             original_user_query = state["messages"][-1].content
-            print(f"[SAFETY] Forcing tool usage for query: {original_user_query} (type: {query_type})")
+            
+            # Map classification to user-friendly names for logging
+            classification_map = {
+                "spotify": "Spotify API",
+                "web": "Tavily Web Search", 
+                "vector": "Vector Search"
+            }
+            
+            print(f"[SAFETY] Forcing tool usage for query: {original_user_query}")
+            print(f"[Classification] {classification_map.get(query_type, query_type)}")
             
             # Choose the appropriate tool based on classification
             if query_type == "vector":
@@ -254,7 +266,36 @@ def call_model(state: ChatState) -> ChatState:
         for tool_call in response.tool_calls:
             tool_name = tool_call["name"]
             tool_args = tool_call.get("args", {})
-            print(f"[Tool Call] {tool_name}({tool_args})")
+            
+            # Map tool names to classification types for logging
+            tool_classification_map = {
+                "search_music_by_vibe": "Vector Search",
+                "search_music_info": "Tavily Web Search",
+                "get_top_tracks": "Spotify API",
+                "get_top_artists": "Spotify API", 
+                "get_playlist_names": "Spotify API",
+                "get_recently_played": "Spotify API",
+                "search_tracks": "Spotify API",
+                "get_saved_tracks": "Spotify API",
+                "get_playlists_with_details": "Spotify API",
+                "get_playlist_tracks": "Spotify API",
+                "get_recent_playlists": "Spotify API",
+                "search_artist_info": "Spotify API",
+                "get_spotify_generated_playlists": "Spotify API",
+                "get_current_user_profile": "Spotify API",
+                "get_user_profile": "Spotify API",
+                "get_followed_artists": "Spotify API",
+                "follow_artist": "Spotify API",
+                "unfollow_artist": "Spotify API",
+                "check_if_following_artist": "Spotify API",
+                "follow_playlist": "Spotify API",
+                "unfollow_playlist": "Spotify API",
+                "check_if_following_playlist": "Spotify API",
+                "get_recommendations_by_track": "Spotify API"
+            }
+            
+            classification = tool_classification_map.get(tool_name, "Unknown")
+            print(f"[Tool Call] {tool_name}({tool_args}) → {classification}")
 
             try:
                 # Find matching tool

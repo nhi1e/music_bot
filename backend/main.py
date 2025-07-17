@@ -1,4 +1,4 @@
-from app.agent import graph
+from src.core.agent import graph
 from langchain_core.messages import HumanMessage
 import asyncio
 

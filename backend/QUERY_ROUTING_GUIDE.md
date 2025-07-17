@@ -12,7 +12,7 @@ The bot uses a classifier system that analyzes user queries and routes them to o
 
 ## Tool Categories
 
-### 🎵 Spotify Tools (`spotify`)
+### Spotify Tools (`spotify`)
 
 **Purpose**: Handle queries about the user's personal Spotify data and account interactions.
 
@@ -25,14 +25,14 @@ The bot uses a classifier system that analyzes user queries and routes them to o
 
 **Examples that route to Spotify**:
 
-- ✅ "What are my top tracks this month?"
-- ✅ "Show me my playlists"
-- ✅ "What did I listen to recently?"
-- ✅ "My saved tracks"
-- ✅ "My top artists"
-- ✅ "Recently played songs"
-- ✅ "Follow this artist"
-- ✅ "Get my playlist tracks"
+- "What are my top tracks this month?"
+- "Show me my playlists"
+- "What did I listen to recently?"
+- "My saved tracks"
+- "My top artists"
+- "Recently played songs"
+- "Follow this artist"
+- "Get my playlist tracks"
 
 **Available Spotify Functions**:
 
@@ -47,7 +47,7 @@ The bot uses a classifier system that analyzes user queries and routes them to o
 - `follow_artist()` - Follow an artist
 - `unfollow_artist()` - Unfollow an artist
 
-### 🔍 Vector Search Tools (`vector`)
+### Vector Search Tools (`vector`)
 
 **Purpose**: Provide music recommendations based on musical characteristics, mood, vibe, or similarity to specific songs.
 
@@ -60,16 +60,16 @@ The bot uses a classifier system that analyzes user queries and routes them to o
 
 **Examples that route to Vector Search**:
 
-- ✅ "Give me chill but danceable music"
-- ✅ "Happy indie tracks with low energy"
-- ✅ "Songs similar to Bohemian Rhapsody by Queen"
-- ✅ "Music like Hotel California"
-- ✅ "Energetic electronic songs"
-- ✅ "Sad acoustic tracks"
-- ✅ "Upbeat songs for working out"
-- ✅ "Mellow jazz for studying"
-- ✅ "Fast tempo rock music"
-- ✅ "Instrumental ambient music"
+- "Give me chill but danceable music"
+- "Happy indie tracks with low energy"
+- "Songs similar to Bohemian Rhapsody by Queen"
+- "Music like Hotel California"
+- "Energetic electronic songs"
+- "Sad acoustic tracks"
+- "Upbeat songs for working out"
+- "Mellow jazz for studying"
+- "Fast tempo rock music"
+- "Instrumental ambient music"
 
 **Vector Search Features**:
 
@@ -88,7 +88,7 @@ The bot uses a classifier system that analyzes user queries and routes them to o
 - "sounds like [reference]"
 - "reminds me of [reference]"
 
-### 🌐 Web Search Tools (`web`)
+### Web Search Tools (`web`)
 
 **Purpose**: Retrieve general music information, artist facts, music history, and educational content.
 
@@ -102,15 +102,15 @@ The bot uses a classifier system that analyzes user queries and routes them to o
 
 **Examples that route to Web Search**:
 
-- ✅ "What is ambient music?"
-- ✅ "Who is Drake?"
-- ✅ "Tell me about jazz history"
-- ✅ "What instruments are used in rock music?"
-- ✅ "Biography of The Beatles"
-- ✅ "Explain music theory"
-- ✅ "What genre is this artist?"
-- ✅ "History of hip-hop"
-- ✅ "Awards won by Taylor Swift"
+- "What is ambient music?"
+- "Who is Drake?"
+- "Tell me about jazz history"
+- "What instruments are used in rock music?"
+- "Biography of The Beatles"
+- "Explain music theory"
+- "What genre is this artist?"
+- "History of hip-hop"
+- "Awards won by Taylor Swift"
 
 **Web Search Functions**:
 

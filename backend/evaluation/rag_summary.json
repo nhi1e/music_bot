@@ -1,0 +1,9 @@
+{
+  "overall_faithfulness": 0.9468409586056644,
+  "overall_answer_relevancy": 0.9604591492713699,
+  "overall_context_precision": 0.0,
+  "avg_recommendations_per_query": 5.0,
+  "avg_similarity_score": 0.8049199999999999,
+  "total_questions": 5,
+  "successful_queries": 5
+}

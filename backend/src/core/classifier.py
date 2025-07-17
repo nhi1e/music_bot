@@ -19,6 +19,18 @@ def classify_query(query: str) -> str:
         "current user", "playlist tracks"
     ]
     
+    # Additional Spotify patterns that indicate user-specific data
+    spotify_patterns = [
+        r"top \d+ (songs?|tracks?|artists?)",  # "top 10 songs", "top 5 artists"
+        r"top (songs?|tracks?|artists?)",      # "top songs", "top artists"
+        r"(songs?|tracks?|artists?) (from |in |over )?the? ?last \d+",  # "songs last 3 days", "artists in the last week"
+        r"(songs?|tracks?|artists?) (from |in |over )?last \w+",        # "songs last week", "tracks last month"
+        r"recent(ly)? (played|listened)",       # "recently played", "recent listened"
+        r"what (did I|have I) (listen|play)",  # "what did I listen to", "what have I played"
+        r"show me my",                          # "show me my playlists"
+        r"get my",                              # "get my top tracks"
+    ]
+    
     # Vector search keywords for music recommendation based on vibe/characteristics
     vector_keywords = [
         "chill", "danceable", "upbeat", "energetic", "mellow", "relaxing",
@@ -53,6 +65,10 @@ def classify_query(query: str) -> str:
     
     # Check for explicit Spotify user data queries
     if any(keyword in q for keyword in spotify_keywords):
+        return "spotify"
+    
+    # Check for Spotify patterns using regex
+    if any(re.search(pattern, q) for pattern in spotify_patterns):
         return "spotify"
     
     # Check for song similarity patterns first (highest priority for vector search)
