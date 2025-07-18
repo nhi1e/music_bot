@@ -21,12 +21,11 @@ def run_cli():
 def run_server():
     """Run the web server"""
     import uvicorn
-    from src.api.server import app
     
     uvicorn.run(
-        app,
+        "src.api.server:app",
         host="0.0.0.0",
-        port=8000,
+        port=8080,
         reload=True
     )
 

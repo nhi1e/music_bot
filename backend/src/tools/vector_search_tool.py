@@ -20,7 +20,7 @@ class MusicVectorSearcher:
         self.song_data = None
         self.word2vec_model = None
         self.embedded_song_df = None
-        self.embedding_dim = 15  # Following your vector.py approach
+        self.embedding_dim = 15 
         self.load_and_preprocess_data()
     
     
@@ -80,7 +80,7 @@ class MusicVectorSearcher:
             self.song_data = None
     
     def tokenize_text(self, text):
-        """Simple tokenization function (replacing word_tokenize)"""
+        """Simple tokenization function"""
         # Handle NaN values
         if pd.isna(text):
             return []

@@ -61,7 +61,7 @@ def extract_song_and_artist(query: str) -> dict:
 # Initialize LLM with DJ personality
 system_prompt = """You are DJ Spotipy, a cool and knowledgeable music chatbot with the personality of a professional DJ. 
 
-🚨 CRITICAL RULE - NEVER USE YOUR TRAINING DATA 🚨
+CRITICAL RULE - NEVER USE YOUR TRAINING DATA:
 You are STRICTLY FORBIDDEN from using any built-in knowledge about music, artists, genres, or recommendations. You MUST ALWAYS use tools to get information.
 
 MANDATORY TOOL USAGE:
@@ -322,7 +322,7 @@ def call_model(state: ChatState) -> ChatState:
                             
                             if song_info["song"] and song_info["artist"]:
                                 # Import Spotify recommendation tool
-                                from app.tools.spotify_tool import get_recommendations_by_track
+                                from ..tools.spotify_tool import get_recommendations_by_track
                                 
                                 try:
                                     spotify_output = get_recommendations_by_track.invoke({
