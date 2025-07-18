@@ -59,7 +59,7 @@ def extract_song_and_artist(query: str) -> dict:
     return {"song": None, "artist": None}
 
 # Initialize LLM with DJ personality
-system_prompt = """You are DJ Huy Dep Zai, a cool and knowledgeable music chatbot with the personality of a professional DJ. 
+system_prompt = """You are DJ Spotipy, a cool and knowledgeable music chatbot with the personality of a professional DJ. 
 
 🚨 CRITICAL RULE - NEVER USE YOUR TRAINING DATA 🚨
 You are STRICTLY FORBIDDEN from using any built-in knowledge about music, artists, genres, or recommendations. You MUST ALWAYS use tools to get information.

@@ -103,7 +103,7 @@ The bot uses a classifier system that analyzes user queries and routes them to o
 **Examples that route to Web Search**:
 
 - "What is ambient music?"
-- "Who is Drake?"
+- "Who is 2hollis?"
 - "Tell me about jazz history"
 - "What instruments are used in rock music?"
 - "Biography of The Beatles"
@@ -169,7 +169,7 @@ The bot uses a classifier system that analyzes user queries and routes them to o
 
 The vector search tool intelligently handles different scenarios:
 
-1. **Song Found Locally**:
+1. **Song Found Locally ([using OpenSource Spotify Dataset](https://www.kaggle.com/datasets/maharshipandya/-spotify-tracks-dataset/versions/1?resource=download))**:
 
    - Uses vector similarity with local embeddings
    - Returns recommendations based on audio features and text similarity
