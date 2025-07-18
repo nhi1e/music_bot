@@ -74,8 +74,8 @@ export const ChatMessageComponent: React.FC<ChatMessageComponentProps> = ({
 			{/* Spotify Wrapped Card */}
 			{message.spotifyWrapped && (
 				<div
-					className={`w-full mt-4 flex ${
-						message.role === "user" ? "justify-end mr-4" : "justify-start ml-4"
+					className={`w-full flex ${
+						message.role === "user" ? "justify-end mr-4" : "justify-start"
 					}`}
 				>
 					<SpotifyWrappedCard data={message.spotifyWrapped} />
@@ -83,49 +83,51 @@ export const ChatMessageComponent: React.FC<ChatMessageComponentProps> = ({
 			)}
 
 			{/* Spotify Images Carousel - Outside text bubble */}
-			{message.spotifyImages && message.spotifyImages.length > 0 && (
-				<div
-					className={`w-full mt-2 ${
-						message.role === "user" ? "mr-4 self-end" : "self-start"
-					}`}
-				>
-					<div className="max-w-max relative">
-						{(() => {
-							const { basisClass, carouselWidth } = getCarouselClasses(
-								message.spotifyImages.length
-							);
-							const imagesToShow = message.spotifyImages.slice(0, 5);
+			{message.spotifyImages &&
+				message.spotifyImages.length > 0 &&
+				!message.spotifyWrapped && (
+					<div
+						className={`w-full mt-2 ${
+							message.role === "user" ? "mr-4 self-end" : "self-start"
+						}`}
+					>
+						<div className="max-w-max relative">
+							{(() => {
+								const { basisClass, carouselWidth } = getCarouselClasses(
+									message.spotifyImages.length
+								);
+								const imagesToShow = message.spotifyImages.slice(0, 5);
 
-							return (
-								<Carousel className={`${carouselWidth} max-w-full`}>
-									<CarouselContent className="-ml-1">
-										{imagesToShow.map((image, index) => (
-											<CarouselItem
-												key={index}
-												className={`pl-1 ${basisClass}`}
-											>
-												<div className="p-1">
-													<div className="aspect-square rounded-md overflow-hidden ">
-														<img
-															src={image.url}
-															alt={image.title || "Spotify"}
-															className="w-full h-full object-cover"
-															onError={(e) => {
-																const target = e.target as HTMLImageElement;
-																target.style.display = "none";
-															}}
-														/>
+								return (
+									<Carousel className={`${carouselWidth} max-w-full`}>
+										<CarouselContent className="-ml-1">
+											{imagesToShow.map((image, index) => (
+												<CarouselItem
+													key={index}
+													className={`pl-1 ${basisClass}`}
+												>
+													<div className="p-1">
+														<div className="aspect-square rounded-md overflow-hidden ">
+															<img
+																src={image.url}
+																alt={image.title || "Spotify"}
+																className="w-full h-full object-cover"
+																onError={(e) => {
+																	const target = e.target as HTMLImageElement;
+																	target.style.display = "none";
+																}}
+															/>
+														</div>
 													</div>
-												</div>
-											</CarouselItem>
-										))}
-									</CarouselContent>
-								</Carousel>
-							);
-						})()}
+												</CarouselItem>
+											))}
+										</CarouselContent>
+									</Carousel>
+								);
+							})()}
+						</div>
 					</div>
-				</div>
-			)}
+				)}
 		</div>
 	);
 };

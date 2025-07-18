@@ -146,7 +146,7 @@ function App() {
 			let finalCleanedText = cleanedText;
 			if (spotifyWrapped) {
 				finalCleanedText = cleanedText
-					.replace(/SPOTIFY_WRAPPED_DATA:\{[\s\S]*?\}/, "")
+					.replace(/SPOTIFY_WRAPPED_DATA:[\s\S]*$/, "")
 					.trim();
 			}
 

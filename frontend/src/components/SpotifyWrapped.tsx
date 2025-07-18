@@ -1,6 +1,5 @@
 import React from "react";
 
-
 interface SpotifyWrappedData {
 	topArtists: Array<{ name: string; image?: string }>;
 	topSongs: Array<{ name: string; artist?: string }>;
@@ -12,6 +11,11 @@ interface SpotifyWrappedData {
 interface SpotifyWrappedCardProps {
 	data: SpotifyWrappedData;
 }
+const bgOptions = [
+	{ bg: "bg-[#121212]", pattern: "/pattern_black.png", text: "text-[#f2fe48]" },
+	{ bg: "bg-[#fa5dc7]", pattern: "/pattern_pink.png", text: "text-[#121212]" },
+	{ bg: "bg-[#f2ff46]", pattern: "/pattern_yellow.png", text: "text-[#121212]" },
+];
 
 export default function SpotifyWrappedCard({ data }: SpotifyWrappedCardProps) {
 	const { topArtists, topSongs, topGenre, timeframe, topArtistImage } = data;
@@ -22,16 +26,19 @@ export default function SpotifyWrappedCard({ data }: SpotifyWrappedCardProps) {
 		topArtists[0]?.image ||
 		"https://i.scdn.co/image/ab6761610000e5ebd1b2c17ca08f1fc22e4a90b6";
 
+	const randomIndex = Math.floor(Math.random() * bgOptions.length);
+	const { bg, pattern, text } = bgOptions[randomIndex];
+
 	return (
 		<div
-			className="w-[430px] h-[765px] flex items-center justify-center bg-[#fa5dc7] rounded-2xl shadow-2xl overflow-hidden mx-auto"
+			className={`w-[430px] h-[765px] flex items-center justify-center ${bg} rounded-2xl shadow-2xl overflow-hidden`}
 			style={{ transform: "scale(0.8)", transformOrigin: "top left" }}
 		>
 			<div className="w-[400px] h-[700px] flex flex-col items-center pt-1">
 				{/* Pattern with artist image overlapping */}
 				<div className="relative flex flex-col items-center">
 					<img
-						src="/pattern1.png"
+						src={pattern}
 						alt="Spotify Wrapped Pattern"
 						className="w-88 h-88 object-contain"
 						draggable={false}
@@ -47,7 +54,7 @@ export default function SpotifyWrappedCard({ data }: SpotifyWrappedCardProps) {
 				</div>
 				{/* Stats Section */}
 				<div className="w-full mt-8 px-6 lato-regular">
-					<div className="grid grid-cols-2 gap-8 text-black">
+					<div className={`grid grid-cols-2 gap-8 ${text}`}>
 						{/* Top Artists */}
 						<div>
 							<div className="text-xl mb-2 tracking-wide">Top Artists</div>
@@ -73,7 +80,9 @@ export default function SpotifyWrappedCard({ data }: SpotifyWrappedCardProps) {
 						</div>
 					</div>
 					{/* Genre */}
-					<div className="flex justify-between items-center mt-6 text-base text-black">
+					<div
+						className={`flex justify-between items-center mt-6 text-base ${text}`}
+					>
 						<div>
 							<div className="text-xl ">Top Genre</div>
 							<div className="text-3xl lato-black">{topGenre}</div>

@@ -13,6 +13,10 @@ def classify_query(query: str) -> str:
     
     # Spotify-specific user data queries
     spotify_keywords = [
+        # Wrapped/summary keywords (highest priority)
+        "wrapped", "spotify wrapped", "year in review", "music summary", 
+        "annual summary", "yearly recap", "my year", "year recap",
+        # Other Spotify keywords
         "my", "top tracks", "top artists", "my playlist", "my music", 
         "recently played", "saved tracks", "liked songs", "following",
         "spotify profile", "user profile", "follow artist", "unfollow",
@@ -21,6 +25,13 @@ def classify_query(query: str) -> str:
     
     # Additional Spotify patterns that indicate user-specific data
     spotify_patterns = [
+        # Wrapped/summary patterns (highest priority)
+        r"(spotify )?wrapped?",                  # "wrapped", "spotify wrapped"
+        r"(my )?(year|music|annual) (in )?review", # "year in review", "my music review"
+        r"(music|spotify) summary",             # "music summary", "spotify summary"
+        r"yearly? (recap|summary)",             # "yearly recap", "year summary"
+        r"(my )?year (of |in )?music",          # "my year in music", "year of music"
+        # Other patterns
         r"top \d+ (songs?|tracks?|artists?)",  # "top 10 songs", "top 5 artists"
         r"top (songs?|tracks?|artists?)",      # "top songs", "top artists"
         r"(songs?|tracks?|artists?) (from |in |over )?the? ?last \d+",  # "songs last 3 days", "artists in the last week"
