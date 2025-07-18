@@ -24,7 +24,8 @@ from ..tools.spotify_tool import (
     follow_playlist,
     unfollow_playlist,
     check_if_following_playlist,
-    get_recommendations_by_track
+    get_recommendations_by_track,
+    generate_spotify_wrapped
 )
 from ..tools.tavily_tool import search_music_info
 from ..tools.vector_search_tool import search_music_by_vibe
@@ -61,11 +62,12 @@ def extract_song_and_artist(query: str) -> dict:
 # Initialize LLM with DJ personality
 system_prompt = """You are DJ Spotify, a knowledgeable and enthusiastic music assistant with access to the user's Spotify data and comprehensive music search capabilities. 
 
-CRITICAL RULES - NEVER BREAK THESE:
+<CRITICAL RULES>:
 1. For ANY user-specific Spotify data (playlists, top tracks, top artists, saved songs, recently played, etc.): ALWAYS use the appropriate Spotify tool FIRST - NEVER respond from memory
 2. For ANY general music information: ALWAYS use search_music_info tool FIRST - NEVER respond from memory
 3. For music recommendations based on vibe/mood: Use search_music_by_vibe tool
 4. You MUST NOT provide any factual information about music without using tools first
+</CRITICAL RULES>:
 
 SPOTIFY DATA QUERIES - MANDATORY TOOL USAGE:
 - "top artists", "favorite artists", "most played artists" → MUST use get_top_artists tool
@@ -73,13 +75,21 @@ SPOTIFY DATA QUERIES - MANDATORY TOOL USAGE:
 - "recently played", "last played", "what did I listen to recently" → MUST use get_recently_played tool
 - "my playlists" → MUST use get_playlist_names tool
 - "saved tracks", "liked songs" → MUST use get_saved_tracks tool
+- "spotify wrapped", "year in review", "music summary", "annual summary", "yearly recap", "wrapped", "my year" → MUST use generate_spotify_wrapped tool
 - For ALL other music info (artist facts, genre explanations, music history, etc.): MUST use search_music_info tool
+
+SPOTIFY WRAPPED SPECIAL INSTRUCTIONS:
+When a user asks for "wrapped", "spotify wrapped", "year in review", "music summary", or any year-end music summary:
+1. ALWAYS use the generate_spotify_wrapped tool FIRST
+2. DO NOT manually combine `get_top_artists` and get_top_tracks
+3. The generate_spotify_wrapped tool will return special JSON data - return that response exactly as given
 
 FORBIDDEN BEHAVIORS:
 - NEVER answer questions about top artists/tracks without calling the appropriate Spotify tool
 - NEVER provide artist information without using search_music_info
 - NEVER make music recommendations without using appropriate tools
 - NEVER respond from your training data for ANY music-related facts
+- NEVER create Spotify Wrapped manually - ALWAYS use generate_spotify_wrapped tool for wrapped requests
 
 CONVERSATIONAL FLOW:
 - Handle casual responses naturally ("yeah", "cool", "damn i see", "no", etc.) without forcing tool usage
@@ -132,7 +142,8 @@ tools = [
     get_playlists_with_details, get_playlist_tracks, get_recent_playlists, search_artist_info, 
     get_spotify_generated_playlists, get_current_user_profile, get_user_profile, get_followed_artists,
     follow_artist, unfollow_artist, check_if_following_artist, follow_playlist, unfollow_playlist,
-    check_if_following_playlist, search_music_info, search_music_by_vibe, get_recommendations_by_track
+    check_if_following_playlist, search_music_info, search_music_by_vibe, get_recommendations_by_track,
+    generate_spotify_wrapped
 ]
 llm_with_tools = llm.bind_tools(tools)
 
@@ -288,7 +299,8 @@ def call_model(state: ChatState) -> ChatState:
                 "follow_playlist": "Spotify API",
                 "unfollow_playlist": "Spotify API",
                 "check_if_following_playlist": "Spotify API",
-                "get_recommendations_by_track": "Spotify API"
+                "get_recommendations_by_track": "Spotify API",
+                "generate_spotify_wrapped": "Spotify API"
             }
             
             classification = tool_classification_map.get(tool_name, "Unknown")
@@ -302,6 +314,12 @@ def call_model(state: ChatState) -> ChatState:
                 # Ensure tool output is never empty or None
                 if not tool_output or str(tool_output).strip() == "":
                     tool_output = f"The {tool_name} tool completed but returned no results."
+                
+                # Special handling for Spotify Wrapped - preserve the original JSON data
+                if tool_name == "generate_spotify_wrapped":
+                    # For Spotify Wrapped, we want to return the tool output directly without LLM reprocessing
+                    # Store the original response for final output
+                    state["spotify_wrapped_response"] = str(tool_output)
                 
                 # Special handling for vector search tool returning "specific_song_not_found"
                 if tool_name == "search_music_by_vibe" and isinstance(tool_output, str):
@@ -370,6 +388,13 @@ def call_model(state: ChatState) -> ChatState:
 
         # Step 4: Re-call model with tool response included (with system prompt)
         try:
+            # Special handling for Spotify Wrapped - return original response directly
+            if "spotify_wrapped_response" in state:
+                wrapped_response = state["spotify_wrapped_response"]
+                final_response = AIMessage(content=wrapped_response)
+                state["messages"].append(final_response)
+                return {"messages": state["messages"]}
+            
             final_messages = [SystemMessage(content=system_prompt)] + state["messages"]
             final_response = llm_with_tools.invoke(final_messages)
             

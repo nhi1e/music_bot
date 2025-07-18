@@ -8,6 +8,7 @@ import {
 	CarouselPrevious,
 } from "@/components/ui/carousel";
 import { ChatMessage } from "@/types";
+import SpotifyWrappedCard from "./SpotifyWrapped";
 
 interface ChatMessageComponentProps {
 	message: ChatMessage;
@@ -69,6 +70,17 @@ export const ChatMessageComponent: React.FC<ChatMessageComponentProps> = ({
 					{message.timestamp.toLocaleTimeString()}
 				</div>
 			</div>
+
+			{/* Spotify Wrapped Card */}
+			{message.spotifyWrapped && (
+				<div
+					className={`w-full mt-4 flex ${
+						message.role === "user" ? "justify-end mr-4" : "justify-start ml-4"
+					}`}
+				>
+					<SpotifyWrappedCard data={message.spotifyWrapped} />
+				</div>
+			)}
 
 			{/* Spotify Images Carousel - Outside text bubble */}
 			{message.spotifyImages && message.spotifyImages.length > 0 && (

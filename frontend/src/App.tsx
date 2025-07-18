@@ -6,6 +6,7 @@ import { ChatContainer } from "@/components/ChatContainer";
 import { ChatInput } from "@/components/ChatInput";
 import { SpotifyUser, ChatMessage } from "@/types";
 import { extractSpotifyImages } from "@/utils/spotifyImageExtractor";
+import { extractSpotifyWrappedData } from "@/utils/spotifyWrappedExtractor";
 import { forceScrollToBottom, smoothScrollToBottom } from "@/utils/scrollUtils";
 import {
 	checkAuthStatus,
@@ -13,7 +14,7 @@ import {
 	sendChatMessage,
 	getSpotifyLoginUrl,
 } from "@/services/api";
-
+import SpotifyWrapped from "@/components/SpotifyWrapped"; // Import SpotifyWrapped component
 function App() {
 	const [isAuthenticated, setIsAuthenticated] = useState(false);
 	const [isLoading, setIsLoading] = useState(true);
@@ -134,17 +135,28 @@ function App() {
 				data.response || "Sorry, I couldn't process your request.";
 			const { images: spotifyImages, cleanedText } =
 				extractSpotifyImages(responseContent);
+			const spotifyWrapped = extractSpotifyWrappedData(responseContent);
 
 			console.log("Response from backend:", responseContent);
 			console.log("Extracted Spotify images:", spotifyImages);
+			console.log("Extracted Spotify Wrapped:", spotifyWrapped);
 			console.log("Cleaned text:", cleanedText);
+
+			// Clean the text again if we found wrapped data (remove the JSON)
+			let finalCleanedText = cleanedText;
+			if (spotifyWrapped) {
+				finalCleanedText = cleanedText
+					.replace(/SPOTIFY_WRAPPED_DATA:\{[\s\S]*?\}/, "")
+					.trim();
+			}
 
 			const aiMessage: ChatMessage = {
 				id: (Date.now() + 1).toString(),
-				content: cleanedText,
+				content: finalCleanedText,
 				role: "assistant",
 				timestamp: new Date(),
 				spotifyImages: spotifyImages.length > 0 ? spotifyImages : undefined,
+				spotifyWrapped: spotifyWrapped || undefined,
 			};
 
 			console.log("AI message with images:", aiMessage);

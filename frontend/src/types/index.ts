@@ -13,10 +13,19 @@ export interface SpotifyImage {
 	type?: "album" | "artist" | "playlist" | "track";
 }
 
+export interface SpotifyWrappedData {
+	topArtists: Array<{ name: string; image?: string }>;
+	topSongs: Array<{ name: string; artist?: string }>;
+	topGenre: string;
+	timeframe: string;
+	topArtistImage?: string;
+}
+
 export interface ChatMessage {
 	id: string;
 	content: string;
 	role: "user" | "assistant";
 	timestamp: Date;
 	spotifyImages?: SpotifyImage[];
+	spotifyWrapped?: SpotifyWrappedData;
 }
