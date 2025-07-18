@@ -26,7 +26,7 @@ function App() {
 	// Auto-scroll to the latest message
 	useEffect(() => {
 		const scrollToBottom = () => {
-			smoothScrollToBottom(chatContainerRef, { current: null });
+			smoothScrollToBottom(chatContainerRef);
 		};
 
 		// Multiple scroll attempts with increasing delays
@@ -34,14 +34,8 @@ function App() {
 			setTimeout(scrollToBottom, 50),
 			setTimeout(scrollToBottom, 150),
 			setTimeout(scrollToBottom, 300),
-			setTimeout(
-				() => forceScrollToBottom(chatContainerRef, { current: null }),
-				500
-			),
-			setTimeout(
-				() => forceScrollToBottom(chatContainerRef, { current: null }),
-				800
-			),
+			setTimeout(() => forceScrollToBottom(chatContainerRef), 500),
+			setTimeout(() => forceScrollToBottom(chatContainerRef), 800),
 		];
 
 		return () => timeouts.forEach(clearTimeout);
@@ -131,7 +125,7 @@ function App() {
 
 		// Scroll to bottom after adding user message
 		setTimeout(() => {
-			smoothScrollToBottom(chatContainerRef, { current: null });
+			smoothScrollToBottom(chatContainerRef);
 		}, 50);
 
 		try {
@@ -141,9 +135,9 @@ function App() {
 			const { images: spotifyImages, cleanedText } =
 				extractSpotifyImages(responseContent);
 
-			console.log("🎵 Response from backend:", responseContent);
-			console.log("🖼️ Extracted Spotify images:", spotifyImages);
-			console.log("📝 Cleaned text:", cleanedText);
+			console.log("Response from backend:", responseContent);
+			console.log("Extracted Spotify images:", spotifyImages);
+			console.log("Cleaned text:", cleanedText);
 
 			const aiMessage: ChatMessage = {
 				id: (Date.now() + 1).toString(),
@@ -153,12 +147,12 @@ function App() {
 				spotifyImages: spotifyImages.length > 0 ? spotifyImages : undefined,
 			};
 
-			console.log("💬 AI message with images:", aiMessage);
+			console.log("AI message with images:", aiMessage);
 			setMessages((prev) => [...prev, aiMessage]);
 
 			// Scroll to bottom after adding AI message
 			setTimeout(() => {
-				smoothScrollToBottom(chatContainerRef, { current: null });
+				smoothScrollToBottom(chatContainerRef);
 			}, 50);
 		} catch (error) {
 			console.error("Error sending message:", error);
@@ -172,7 +166,7 @@ function App() {
 			setMessages((prev) => [...prev, errorMessage]);
 
 			setTimeout(() => {
-				smoothScrollToBottom(chatContainerRef, { current: null });
+				smoothScrollToBottom(chatContainerRef);
 			}, 50);
 		} finally {
 			setIsTyping(false);

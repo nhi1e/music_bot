@@ -1,8 +1,8 @@
 import { SpotifyImage } from "@/types";
 
 export const extractSpotifyImages = (responseText: string) => {
-	console.log("🔍 Extracting Spotify images from response:", responseText);
-	console.log("🔍 Response text length:", responseText.length);
+	console.log("Extracting Spotify images from response:", responseText);
+	console.log("Response text length:", responseText.length);
 
 	const images: SpotifyImage[] = [];
 	let cleanedText = responseText;
@@ -20,16 +20,16 @@ export const extractSpotifyImages = (responseText: string) => {
 		const markdownMatches: string[] = [];
 
 		markdownImagePatterns.forEach((pattern, index) => {
-			console.log(`📸 Testing markdown pattern ${index + 1}:`, pattern.source);
+			console.log(`Testing markdown pattern ${index + 1}:`, pattern.source);
 			const matches = responseText.match(pattern);
-			console.log(`📸 Pattern ${index + 1} matches:`, matches);
+			console.log(`Pattern ${index + 1} matches:`, matches);
 			if (matches) {
 				markdownMatches.push(...matches);
 				const urlMatches = matches
 					.map((match) => {
-						console.log("📸 Processing match:", match);
+						console.log("Processing match:", match);
 						const urlMatch = match.match(/\(([^)]+)\)/);
-						console.log("📸 Extracted URL:", urlMatch ? urlMatch[1] : null);
+						console.log("Extracted URL:", urlMatch ? urlMatch[1] : null);
 						return urlMatch ? urlMatch[1] : null;
 					})
 					.filter((url): url is string => url !== null);
@@ -57,7 +57,7 @@ export const extractSpotifyImages = (responseText: string) => {
 			}
 		});
 
-		console.log("🎵 Found image URLs:", foundUrls);
+		console.log("Found image URLs:", foundUrls);
 
 		if (foundUrls.length > 0) {
 			// Remove duplicates and limit to 5 images
@@ -66,20 +66,20 @@ export const extractSpotifyImages = (responseText: string) => {
 			);
 			const limitedUrls = uniqueUrls.slice(0, 5);
 
-			console.log("✨ Processing unique URLs:", limitedUrls);
+			console.log("Processing unique URLs:", limitedUrls);
 
 			limitedUrls.forEach((url, index) => {
-				console.log(`🖼️ Processing URL ${index + 1}:`, url);
+				console.log(`Processing URL ${index + 1}:`, url);
 
 				// Try to determine the type based on URL patterns
 				let type: "album" | "artist" | "playlist" | "track" = "album";
 
 				if (url.includes("mosaic")) {
 					type = "playlist";
-					console.log("🎵 Detected playlist type");
+					console.log("Detected playlist type");
 				} else if (url.includes("lineup-images")) {
 					type = "artist";
-					console.log("🎤 Detected artist type");
+					console.log(" Detected artist type");
 				} else if (url.includes("i.scdn.co")) {
 					// Check the original response to see if this was an artist or track image
 					const urlIndex = responseText.indexOf(url);
@@ -90,27 +90,27 @@ export const extractSpotifyImages = (responseText: string) => {
 						);
 						if (contextBefore.includes("Artist:")) {
 							type = "artist";
-							console.log("🎤 Detected artist type from context");
+							console.log("Detected artist type from context");
 						} else if (contextBefore.includes("Track:")) {
 							type = "track";
-							console.log("🎵 Detected track type from context");
+							console.log("Detected track type from context");
 						}
 					}
 				}
 
 				images.push({ url, type });
 				console.log(
-					`✅ Added image: type=${type}, url=${url.substring(0, 50)}...`
+					`Added image: type=${type}, url=${url.substring(0, 50)}...`
 				);
 			});
 		} else {
-			console.log("❌ No image URLs found in response");
+			console.log("No image URLs found in response");
 		}
 
-		console.log("🖼️ Final extracted images:", images);
-		console.log("📝 Cleaned text:", cleanedText);
+		console.log("Final extracted images:", images);
+		console.log("Cleaned text:", cleanedText);
 	} catch (error) {
-		console.error("❌ Error extracting Spotify images:", error);
+		console.error("Error extracting Spotify images:", error);
 	}
 
 	return { images, cleanedText };
