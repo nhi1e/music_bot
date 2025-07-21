@@ -165,6 +165,75 @@ def call_model(state: ChatState) -> ChatState:
         system_message = SystemMessage(content=system_prompt)
         messages = [system_message] + messages
     
+    # Check if user is directly calling a tool name
+    user_input = state["messages"][-1].content if state["messages"] else ""
+    user_input_lower = user_input.lower().strip()
+    
+    # Define tool name mappings with helpful prompts that encourage natural conversation
+    tool_prompts = {
+        "get_recommendations_by_track": {
+            "prompt": "Instead of using function names, just ask me naturally! Try something like:\n• 'Recommend songs like Bohemian Rhapsody by Queen'\n• 'Find music similar to that song by Taylor Swift'\n• 'I want songs like [song name] by [artist]'\n\nWhat song would you like recommendations based on? 🎵",
+            "requires": ["track_name", "artist_name"]
+        },
+        "get_top_tracks": {
+            "prompt": "Instead of function calls, just ask me naturally! Try:\n• 'Show me my top tracks'\n• 'What are my favorite songs?'\n• 'My most played music from this year'\n• 'Top tracks from last month'\n\nI'd love to show you your favorites! 🎶",
+            "requires": []
+        },
+        "get_top_artists": {
+            "prompt": "Let's keep it conversational! Instead of function names, try:\n• 'Who are my top artists?'\n• 'Show me my favorite musicians'\n• 'My most played artists this year'\n• 'Top artists from last month'\n\nI'd be happy to show you who you've been jamming to! 🎤",
+            "requires": []
+        },
+        "search_music_by_vibe": {
+            "prompt": "Let's talk music naturally! Instead of function calls, describe what you're feeling:\n• 'I want chill but danceable music'\n• 'Find me some sad acoustic songs'\n• 'Something energetic for working out'\n• 'Music similar to lo-fi but with vocals'\n\nWhat vibe are you going for? 🎧",
+            "requires": ["query"]
+        },
+        "search_tracks": {
+            "prompt": "Let's search naturally! Instead of function names, just tell me what you're looking for:\n• 'Find songs by Radiohead'\n• 'Search for that song from the 90s'\n• 'Look up Taylor Swift tracks'\n• 'I'm looking for [song/artist name]'\n\nWhat music are you trying to find? 🔍",
+            "requires": ["query"]
+        },
+        "get_recently_played": {
+            "prompt": "Just ask me naturally! Instead of function calls, try:\n• 'What did I listen to recently?'\n• 'Show me my recent music'\n• 'My last played songs'\n• 'What have I been playing lately?'\n\nI'd love to show you your recent listening history! 📅",
+            "requires": []
+        },
+        "get_saved_tracks": {
+            "prompt": "Let's keep it natural! Instead of function names, just ask:\n• 'Show me my saved songs'\n• 'What music have I liked?'\n• 'My favorite tracks'\n• 'Songs I've saved to my library'\n\nI'd be happy to show you your saved music! ❤️",
+            "requires": []
+        },
+        "get_playlist_names": {
+            "prompt": "Just ask me conversationally! Instead of function calls, try:\n• 'Show me my playlists'\n• 'What playlists do I have?'\n• 'List my music playlists'\n• 'My Spotify playlists'\n\nI'd love to show you all your playlists! 📂",
+            "requires": []
+        },
+        "get_playlist_tracks": {
+            "prompt": "Let's do this naturally! Instead of function names, tell me:\n• 'Show me songs from my Chill playlist'\n• 'What's in my Workout playlist?'\n• 'Tracks from [playlist name]'\n• 'Songs in my favorite playlist'\n\nWhich playlist would you like to explore? 📝",
+            "requires": ["playlist_name"]
+        },
+        "search_artist_info": {
+            "prompt": "Let's talk about artists naturally! Instead of function calls, just ask:\n• 'Tell me about Radiohead'\n• 'What do you know about Taylor Swift?'\n• 'Info on [artist name]'\n• 'Who is [artist]?'\n\nWhich artist are you curious about? 🎤",
+            "requires": ["artist_name"]
+        },
+        "generate_spotify_wrapped": {
+            "prompt": "Let's make this fun! Instead of function names, just say:\n• 'Create my Spotify Wrapped'\n• 'Show me my year in music'\n• 'My music summary'\n• 'What's my musical year been like?'\n\nI'd love to create your personalized music summary! 🎊",
+            "requires": []
+        },
+        "search_music_info": {
+            "prompt": "Just ask me naturally! Instead of function calls, tell me what you're curious about:\n• 'Tell me about jazz music'\n• 'Who invented the guitar?'\n• 'History of rock music'\n• 'What's the story behind [song/artist]?'\n\nWhat musical topic interests you? 🎼",
+            "requires": ["query"]
+        },
+        "get_recommendations_by_audio_features": {
+            "prompt": "Let's find music naturally! Instead of function names, describe what you want:\n• 'I want high energy, happy songs'\n• 'Find me danceable music'\n• 'Something with acoustic vibes'\n• 'Fast tempo electronic tracks'\n• 'Chill but upbeat music'\n\nWhat kind of musical characteristics are you in the mood for? 🎛️",
+            "requires": []
+        }
+    }
+    
+    # Check if user input matches a tool name (direct function call)
+    for tool_name, tool_info in tool_prompts.items():
+        if user_input_lower == tool_name or user_input_lower == tool_name.replace('_', ' '):
+            # Encourage natural conversation instead of direct function calls
+            natural_prompt = f"I see you're looking for {tool_name.replace('_', ' ')}! Instead of using function names, just ask me naturally. {tool_info['prompt']}"
+            response = AIMessage(content=natural_prompt)
+            state["messages"].append(response)
+            return {"messages": state["messages"]}
+    
     # Check for "remember" keyword in user input
     user_input = state["messages"][-1].content if state["messages"] else ""
     if user_input.lower().startswith("remember "):
