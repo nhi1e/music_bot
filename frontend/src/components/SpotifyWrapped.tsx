@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { toPng } from "html-to-image";
 
 interface SpotifyWrappedData {
@@ -66,23 +66,33 @@ export default function SpotifyWrappedCard({ data }: SpotifyWrappedCardProps) {
 	};
 
 	return (
-		<div className="relative">
+		<div className="relative w-[430px] h-[765px]">
+			{/* Save Button - overlay, top right */}
+			<button
+				onClick={downloadImage}
+				className="absolute top-3 right-3 bg-gray-800 hover:bg-gray-700 text-white px-3 py-1 rounded-md text-sm transition-colors z-10"
+				title="Download as image"
+			>
+				💾 Save
+			</button>
+
+			{/* Wrapped component - only this gets captured */}
 			<div
 				ref={componentRef}
-				className={`w-[430px] h-[765px] flex items-center justify-center ${bg} rounded-2xl shadow-2xl overflow-hidden`}
-				style={{ transform: "scale(0.8)", transformOrigin: "top left" }}
+				className={`w-[344px] h-[612px] flex items-center justify-center ${bg} rounded-2xl shadow-2xl overflow-hidden`}
+				style={{ transform: "scale(1)", transformOrigin: "top left" }}
 			>
-				<div className="w-[400px] h-[700px] flex flex-col items-center pt-1">
+				<div className="w-[320px] h-[560px] flex flex-col items-center pt-1">
 					{/* Pattern with artist image overlapping */}
 					<div className="relative flex flex-col items-center">
 						<img
 							src={pattern}
 							alt="Spotify Wrapped Pattern"
-							className="w-88 h-88 object-contain"
+							className="w-70 h-70 object-contain"
 							draggable={false}
 						/>
 						{/* Artist image overlays pattern, centered */}
-						<div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-57 h-57 bg-white flex items-center justify-center overflow-hidden">
+						<div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-44 h-44 bg-white flex items-center justify-center overflow-hidden">
 							<img
 								src={mainArtistImage}
 								alt="Top Artist"
@@ -91,28 +101,38 @@ export default function SpotifyWrappedCard({ data }: SpotifyWrappedCardProps) {
 						</div>
 					</div>
 					{/* Stats Section */}
-					<div className="w-full mt-8 px-6 lato-regular">
+					<div className="w-full mt-6 px-6 lato-regular">
 						<div className={`grid grid-cols-2 gap-8 ${text}`}>
 							{/* Top Artists */}
 							<div>
-								<div className="text-xl mb-2 tracking-wide">Top Artists</div>
-								<ul className="lato-black text-xl">
+								<div className="text-md mb-2 tracking-wide">Top Artists</div>
+								<ul className="lato-black text-md">
 									{topArtists.map((artist, i) => (
 										<li key={i} className="truncate flex items-center">
-											<span className="text-lg mr-2">{i + 1}</span>{" "}
-											{artist.name}
+											<span className="text-md mr-2 flex-shrink-0">
+												{i + 1}
+											</span>
+											<span className="truncate">
+												{artist.name.length > 20
+													? `${artist.name.substring(0, 20)}...`
+													: artist.name}
+											</span>
 										</li>
 									))}
 								</ul>
 							</div>
 							{/* Top Songs */}
 							<div>
-								<div className="text-xl mb-2 tracking-wide">Top Songs</div>
-								<ul className="lato-black text-xl">
+								<div className="text-md mb-2 tracking-wide">Top Songs</div>
+								<ul className="lato-black text-md">
 									{topSongs.map((song, i) => (
 										<li key={i} className="truncate flex items-center">
-											<span className=" mr-2">{i + 1}</span>
-											{song.name}
+											<span className="mr-2 flex-shrink-0">{i + 1}</span>
+											<span className="truncate">
+												{song.name.length > 20
+													? `${song.name.substring(0, 20)}...`
+													: song.name}
+											</span>
 										</li>
 									))}
 								</ul>
@@ -123,22 +143,13 @@ export default function SpotifyWrappedCard({ data }: SpotifyWrappedCardProps) {
 							className={`flex justify-between items-center mt-6 text-base ${text}`}
 						>
 							<div>
-								<div className="text-xl ">Top Genre</div>
-								<div className="text-3xl lato-black">{topGenre}</div>
+								<div className="text-md ">Top Genre</div>
+								<div className="text-2xl lato-black">{topGenre}</div>
 							</div>
 						</div>
 					</div>
 				</div>
 			</div>
-
-			{/* Download Button */}
-			<button
-				onClick={downloadImage}
-				className="absolute top-2 right-2 bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-md text-sm transition-colors"
-				title="Download as image"
-			>
-				💾 Save
-			</button>
 		</div>
 	);
 }

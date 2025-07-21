@@ -321,16 +321,37 @@ def call_model(state: ChatState) -> ChatState:
             if query_type == "database":
                 tool_name = "search_music_by_vibe"
             elif query_type == "spotify":
-                tool_name = "search_music_info"  # Fallback, though this shouldn't happen often
+                # Check if it's a wrapped request
+                if any(keyword in original_user_query.lower() for keyword in ["wrapped", "year in review", "music summary", "yearly recap"]):
+                    tool_name = "generate_spotify_wrapped"
+                else:
+                    # For other Spotify queries, default to a general search
+                    tool_name = "search_music_info"
             else:  # web
                 tool_name = "search_music_info"
             
             # Create a tool call
-            tool_call = {
-                "name": tool_name,
-                "args": {"query": original_user_query},
-                "id": f"forced_search_{len(state['messages'])}"
-            }
+            if tool_name == "generate_spotify_wrapped":
+                # For wrapped requests, determine time range from query
+                time_range = "medium_term"  # default
+                if "6 months" in original_user_query.lower() or "medium" in original_user_query.lower():
+                    time_range = "medium_term"
+                elif "4 weeks" in original_user_query.lower() or "month" in original_user_query.lower() or "short" in original_user_query.lower():
+                    time_range = "short_term"
+                elif "all time" in original_user_query.lower() or "long" in original_user_query.lower() or "year" in original_user_query.lower():
+                    time_range = "long_term"
+                
+                tool_call = {
+                    "name": tool_name,
+                    "args": {"time_range": time_range},
+                    "id": f"forced_search_{len(state['messages'])}"
+                }
+            else:
+                tool_call = {
+                    "name": tool_name,
+                    "args": {"query": original_user_query},
+                    "id": f"forced_search_{len(state['messages'])}"
+                }
             
             response = AIMessage(
                 content="Let me search for that information for you...",
