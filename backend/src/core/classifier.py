@@ -2,12 +2,12 @@ import re
 
 def classify_query(query: str) -> str:
     """
-    Classify queries to determine if they need Spotify tools, web search, or vector search.
+    Classify queries to determine if they need Spotify tools, web search, or database search.
     
     Returns:
     - "spotify": For user-specific Spotify data queries
     - "web": For general music information, artist facts, etc.
-    - "vector": For music recommendation based on characteristics/vibe
+    - "database": For music recommendation based on characteristics/vibe
     """
     q = query.lower()
     
@@ -42,8 +42,8 @@ def classify_query(query: str) -> str:
         r"get my",                              # "get my top tracks"
     ]
     
-    # Vector search keywords for music recommendation based on vibe/characteristics
-    vector_keywords = [
+    # Database search keywords for music recommendation based on vibe/characteristics
+    database_keywords = [
         "chill", "danceable", "upbeat", "energetic", "mellow", "relaxing",
         "happy", "sad", "melancholic", "aggressive", "peaceful", "intense",
         "high energy", "low energy", "acoustic", "electronic", "instrumental",
@@ -82,22 +82,22 @@ def classify_query(query: str) -> str:
     if any(re.search(pattern, q) for pattern in spotify_patterns):
         return "spotify"
     
-    # Check for song similarity patterns first (highest priority for vector search)
+    # Check for song similarity patterns first (highest priority for database search)
     if any(re.search(pattern, q) for pattern in similarity_patterns):
-        return "vector"
+        return "database"
     
-    # Check for vector search queries (music recommendations based on vibe/characteristics)
-    if any(keyword in q for keyword in vector_keywords):
-        return "vector"
+    # Check for database search queries (music recommendations based on vibe/characteristics)
+    if any(keyword in q for keyword in database_keywords):
+        return "database"
         
-    # Additional patterns that suggest vector search
-    vector_patterns = [
+    # Additional patterns that suggest database search
+    database_patterns = [
         "music like", "songs like", "tracks like", "similar to",
         "give me", "find me", "recommend", "suggestion", 
         "vibe", "mood", "feel", "energy", "tempo"
     ]
-    if any(pattern in q for pattern in vector_patterns):
-        return "vector"
+    if any(pattern in q for pattern in database_patterns):
+        return "database"
     
     # Check for general music information queries
     if any(keyword in q for keyword in web_keywords):
@@ -107,12 +107,12 @@ def classify_query(query: str) -> str:
     if any(word in q for word in ["artist", "album", "music", "genre", "band"]) and "my" not in q:
         # But check if it's asking for recommendations first
         if any(word in q for word in ["like", "similar", "recommend", "suggest", "find", "give me"]):
-            return "vector"
+            return "database"
         return "web"
     
     # Check if it's a general songs request (likely wanting recommendations)
     if "songs" in q and any(word in q for word in ["happy", "sad", "energetic", "chill", "upbeat", "mellow", "fast", "slow"]):
-        return "vector"
+        return "database"
     
     # Default to web search for safety (avoid using built-in knowledge)
     return "web"

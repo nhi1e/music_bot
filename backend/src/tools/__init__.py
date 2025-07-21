@@ -4,7 +4,7 @@ Collection of tools for Spotify integration, vector search, and web search.
 """
 
 from .spotify_tool import *
-from .vector_search_tool import search_music_by_vibe
+from .database_search_tool import search_music_by_vibe
 from .tavily_tool import search_music_info
 
 __all__ = [

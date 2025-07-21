@@ -28,7 +28,7 @@ from ..tools.spotify_tool import (
     generate_spotify_wrapped
 )
 from ..tools.tavily_tool import search_music_info
-from ..tools.vector_search_tool import search_music_by_vibe
+from ..tools.database_search_tool import search_music_by_vibe
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
 import re
@@ -84,12 +84,13 @@ When a user asks for "wrapped", "spotify wrapped", "year in review", "music summ
 2. DO NOT manually combine `get_top_artists` and get_top_tracks
 3. The generate_spotify_wrapped tool will return special JSON data - return that response exactly as given
 
-FORBIDDEN BEHAVIORS:
+<FORBIDDEN BEHAVIORS>:
 - NEVER answer questions about top artists/tracks without calling the appropriate Spotify tool
 - NEVER provide artist information without using search_music_info
 - NEVER make music recommendations without using appropriate tools
 - NEVER respond from your training data for ANY music-related facts
 - NEVER create Spotify Wrapped manually - ALWAYS use generate_spotify_wrapped tool for wrapped requests
+</FORBIDDEN BEHAVIORS>
 
 CONVERSATIONAL FLOW:
 - Handle casual responses naturally ("yeah", "cool", "damn i see", "no", etc.) without forcing tool usage
@@ -123,7 +124,7 @@ Your speaking style:
 - If users ask you to adjust your style, be flexible and adapt
 - For casual responses, be natural but suggest music-related topics
 
-Your role:
+<YOUR ROLE>
 - Help users explore their Spotify data using Spotify tools
 - Search for music information, artist details, and recommendations using web search
 - Create a fun, engaging music discovery experience
@@ -131,6 +132,7 @@ Your role:
 - Use tools for ALL factual information - never rely on training data
 - Maintain natural conversation flow while keeping focus on music
 - Remember user preferences when they use the "remember" keyword
+</YOUR ROLE>
 
 Remember: You're their knowledgeable music companion who gets information from reliable sources, not from memory! 🎤"""
 
@@ -147,7 +149,7 @@ tools = [
 ]
 llm_with_tools = llm.bind_tools(tools)
 
-# Classify query: returns "spotify", "web", or "vector"
+# Classify query: returns "spotify", "web", or "database"
 def router(state: ChatState) -> str:
     msg = state["messages"][-1].content
     classification = classify_query(msg)
@@ -287,7 +289,7 @@ def call_model(state: ChatState) -> ChatState:
             "what genre", "what style"
         ]
         
-        # Check if user is asking for music recommendations (should use vector search)
+        # Check if user is asking for music recommendations (should use database search)
         recommendation_questions = [
             "recommend", "similar to", "like", "find me", "give me", "suggest", 
             "music for", "songs for", "tracks that", "chill", "danceable", "upbeat"
@@ -309,14 +311,14 @@ def call_model(state: ChatState) -> ChatState:
             classification_map = {
                 "spotify": "Spotify API",
                 "web": "Tavily Web Search", 
-                "vector": "Vector Search"
+                "database": "Database Search"
             }
             
             print(f"[SAFETY] Forcing tool usage for query: {original_user_query}")
             print(f"[Classification] {classification_map.get(query_type, query_type)}")
             
             # Choose the appropriate tool based on classification
-            if query_type == "vector":
+            if query_type == "database":
                 tool_name = "search_music_by_vibe"
             elif query_type == "spotify":
                 tool_name = "search_music_info"  # Fallback, though this shouldn't happen often
@@ -346,7 +348,7 @@ def call_model(state: ChatState) -> ChatState:
             
             # Map tool names to classification types for logging
             tool_classification_map = {
-                "search_music_by_vibe": "Vector Search",
+                "search_music_by_vibe": "Database Search",
                 "search_music_info": "Tavily Web Search",
                 "get_top_tracks": "Spotify API",
                 "get_top_artists": "Spotify API", 
@@ -390,7 +392,7 @@ def call_model(state: ChatState) -> ChatState:
                     # Store the original response for final output
                     state["spotify_wrapped_response"] = str(tool_output)
                 
-                # Special handling for vector search tool returning "specific_song_not_found"
+                # Special handling for database search tool returning "specific_song_not_found"
                 if tool_name == "search_music_by_vibe" and isinstance(tool_output, str):
                     try:
                         import json
@@ -398,7 +400,7 @@ def call_model(state: ChatState) -> ChatState:
                         if (isinstance(parsed_output, dict) and 
                             parsed_output.get("error") == "specific_song_not_found"):
                             
-                            print("[AUTO-FALLBACK] Vector search found specific song not in DB, calling Spotify API...")
+                            print("[AUTO-FALLBACK] Database search found specific song not in DB, calling Spotify API...")
                             
                             # Extract song and artist from the original query
                             original_query = tool_args.get("query", "")
@@ -505,7 +507,7 @@ builder = StateGraph(ChatState)
 builder.add_node("router", lambda x: x)  # just passes state through  
 builder.add_node("spotify", call_model)
 builder.add_node("web", call_model)
-builder.add_node("vector", call_model)
+builder.add_node("database", call_model)
 
 # Set entry point
 builder.set_entry_point("router")
@@ -517,14 +519,14 @@ builder.add_conditional_edges(
     {
         "spotify": "spotify",
         "web": "web",
-        "vector": "vector"
+        "database": "database"
     }
 )
 
 # Add edges to END
 builder.add_edge("spotify", END)
 builder.add_edge("web", END)
-builder.add_edge("vector", END)
+builder.add_edge("database", END)
 
 # Compile graph with memory
 graph = builder.compile(checkpointer=memory)
