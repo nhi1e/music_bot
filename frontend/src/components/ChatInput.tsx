@@ -9,7 +9,8 @@ interface ChatInputProps {
 	disabled?: boolean;
 }
 
-const speakerLeft = `#########\\
+const speakerLeft = `
+#########\\
 #(=====)# |
 ######### |
 #-------# |
@@ -26,9 +27,9 @@ const speakerRight = `
             | #########
             | #-------#
 --          | #|  -  |#
-  --  --    | #|( O )|#      
-    --  --  | #|  -  |#   
-		 --	| #|-----|#       
+  --  --    | #|( O )|#
+    --  --  | #|  -  |#
+		 --	| #|-----|#
 			 \\#########`;
 export const ChatInput: React.FC<ChatInputProps> = ({
 	value,
@@ -37,15 +38,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 	disabled,
 }) => {
 	return (
-		<div className="sticky bottom-0 left-0 w-full bg-black z-50 p-4 flex justify-center">
-			{/* This wrapper ensures the speakers+input are centered as a group */}
-			<div className="w-full max-w-4xl flex items-start justify-between">
-				{/* Left speaker */}
-				<pre className="text-white font-mono text-xs leading-[10px] select-none">
-					{speakerLeft}
-				</pre>
-				{/* Input and button */}
-				<form onSubmit={onSubmit} className="flex flex-1 items-start mx-4">
+		<div className="sticky bottom-0 w-full bg-black z-50 p-4 flex justify-center items-start">
+			{/* Left speaker */}
+			<pre className="text-white font-mono text-xs leading-[10px] select-none">
+				{speakerLeft}
+			</pre>
+
+			{/* Input and button - exactly chat width */}
+			<div className="w-full max-w-4xl flex items-start">
+				<form onSubmit={onSubmit} className="flex flex-1 items-start">
 					<Input
 						type="text"
 						placeholder="Ask about music, playlists, or get recommendations..."
@@ -63,11 +64,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 						Send
 					</Button>
 				</form>
-				{/* Right speaker */}
-				<pre className="text-white font-mono text-xs leading-[10px] select-none">
-					{speakerRight}
-				</pre>
 			</div>
+
+			{/* Right speaker */}
+			<pre className="text-white font-mono text-xs leading-[10px] select-none">
+				{speakerRight}
+			</pre>
 		</div>
 	);
 };
