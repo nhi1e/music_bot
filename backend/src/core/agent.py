@@ -71,12 +71,18 @@ system_prompt = """You are DJ Spotify, a knowledgeable and enthusiastic music as
 
 SPOTIFY DATA QUERIES - MANDATORY TOOL USAGE:
 - "wrapped", "spotify wrapped", "year in review", "music summary", "annual summary", "yearly recap", "my year" → MUST use generate_spotify_wrapped tool
-- "top artists", "favorite artists", "most played artists" → MUST use get_top_artists tool
-- "top tracks", "favorite tracks", "most played tracks", "best tracks" → MUST use get_top_tracks tool  
+- "top artists", "favorite artists", "most played artists" → MUST use get_top_artists tool  
+- "top tracks", "top songs", "favorite tracks", "most played tracks", "best tracks" → MUST use get_top_tracks tool
+- "top genre", "most played genre", "favorite genre", "main genre" (standalone genre requests) → MUST use get_top_artists tool
 - "recently played", "last played", "what did I listen to recently" → MUST use get_recently_played tool
 - "my playlists" → MUST use get_playlist_names tool
 - "saved tracks", "liked songs" → MUST use get_saved_tracks tool
 - For ALL other music info (artist facts, genre explanations, music history, etc.): MUST use search_music_info tool
+
+IMPORTANT DISTINCTIONS:
+- "top songs" = get_top_tracks (NOT recently played, NOT wrapped)
+- "most played genre recently" = get_top_artists (NOT wrapped)
+- "spotify wrapped" = generate_spotify_wrapped (comprehensive summary with UI)
 
 SPOTIFY WRAPPED SPECIAL INSTRUCTIONS:
 When a user asks for "wrapped", "spotify wrapped", "year in review", "music summary", or any year-end music summary:
@@ -321,9 +327,23 @@ def call_model(state: ChatState) -> ChatState:
             if query_type == "database":
                 tool_name = "search_music_by_vibe"
             elif query_type == "spotify":
-                # Check if it's a wrapped request
-                if any(keyword in original_user_query.lower() for keyword in ["wrapped", "year in review", "music summary", "yearly recap"]):
+                # Check if it's a wrapped request (must be very specific)
+                if any(keyword in original_user_query.lower() for keyword in ["wrapped", "spotify wrapped", "year in review", "music summary", "yearly recap", "annual summary"]):
                     tool_name = "generate_spotify_wrapped"
+                # Check for genre-only requests (should NOT trigger wrapped)
+                elif any(keyword in original_user_query.lower() for keyword in ["top genre", "most played genre", "favorite genre", "main genre"]) and "wrapped" not in original_user_query.lower():
+                    tool_name = "get_top_artists"  # We'll extract genre from artists
+                # Check for specific Spotify data requests
+                elif any(keyword in original_user_query.lower() for keyword in ["top tracks", "top songs", "favorite tracks", "favorite songs", "most played tracks", "most played songs"]):
+                    tool_name = "get_top_tracks"
+                elif any(keyword in original_user_query.lower() for keyword in ["top artists", "favorite artists", "most played artists"]):
+                    tool_name = "get_top_artists"
+                elif any(keyword in original_user_query.lower() for keyword in ["recently played", "recent tracks", "recent songs", "last played"]) and "top" not in original_user_query.lower():
+                    tool_name = "get_recently_played"
+                elif any(keyword in original_user_query.lower() for keyword in ["my playlists", "playlists"]):
+                    tool_name = "get_playlist_names"
+                elif any(keyword in original_user_query.lower() for keyword in ["saved tracks", "liked songs", "saved songs"]):
+                    tool_name = "get_saved_tracks"
                 else:
                     # For other Spotify queries, default to a general search
                     tool_name = "search_music_info"
@@ -344,6 +364,28 @@ def call_model(state: ChatState) -> ChatState:
                 tool_call = {
                     "name": tool_name,
                     "args": {"time_range": time_range},
+                    "id": f"forced_search_{len(state['messages'])}"
+                }
+            elif tool_name in ["get_top_tracks", "get_top_artists"]:
+                # For top tracks/artists, also determine time range from query
+                time_range = "medium_term"  # default
+                if "6 months" in original_user_query.lower() or "medium" in original_user_query.lower():
+                    time_range = "medium_term"
+                elif "4 weeks" in original_user_query.lower() or "month" in original_user_query.lower() or "short" in original_user_query.lower():
+                    time_range = "short_term"
+                elif "all time" in original_user_query.lower() or "long" in original_user_query.lower() or "year" in original_user_query.lower():
+                    time_range = "long_term"
+                
+                tool_call = {
+                    "name": tool_name,
+                    "args": {"time_range": time_range, "limit": 10},
+                    "id": f"forced_search_{len(state['messages'])}"
+                }
+            elif tool_name in ["get_recently_played", "get_playlist_names", "get_saved_tracks"]:
+                # These tools don't need query parameters, just call them directly
+                tool_call = {
+                    "name": tool_name,
+                    "args": {},
                     "id": f"forced_search_{len(state['messages'])}"
                 }
             else:
@@ -406,6 +448,9 @@ def call_model(state: ChatState) -> ChatState:
                 # Ensure tool output is never empty or None
                 if not tool_output or str(tool_output).strip() == "":
                     tool_output = f"The {tool_name} tool completed but returned no results."
+                
+                print(f"[Tool Output] {tool_name} returned {len(str(tool_output))} characters")
+                print(f"[Tool Output Preview] {str(tool_output)[:150]}...")
                 
                 # Special handling for Spotify Wrapped - preserve the original JSON data
                 if tool_name == "generate_spotify_wrapped":
@@ -490,6 +535,9 @@ def call_model(state: ChatState) -> ChatState:
             final_messages = [SystemMessage(content=system_prompt)] + state["messages"]
             final_response = llm_with_tools.invoke(final_messages)
             
+            print(f"[LLM Response] Generated response with {len(final_response.content) if final_response.content else 0} characters")
+            print(f"[LLM Response Preview] {final_response.content[:150] if final_response.content else 'NO CONTENT'}...")
+            
             # Final safety check on the response
             if final_response.content:
                 content_lower = final_response.content.lower()
@@ -500,7 +548,7 @@ def call_model(state: ChatState) -> ChatState:
                 
                 # If the model says it needs to search but didn't call tools, force another search
                 if any(phrase in content_lower for phrase in safety_phrases) and not final_response.tool_calls:
-                    print("[SAFETY] Model indicated need for search but didn't call tool")
+                    print(f"[SAFETY] Model indicated need for search but didn't call tool. Matched phrase in: {final_response.content[:100]}")
                     final_response.content = "Let me search for that information for you! 🔍"
             
             # Ensure final response is never empty

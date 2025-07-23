@@ -35,8 +35,8 @@ export default function SpotifyWrappedCard({ data }: SpotifyWrappedCardProps) {
 		return bgOptions[randomIndex];
 	};
 
-	// Always generate a fresh theme on each render
-	const currentTheme = getRandomTheme();
+	// Always generate a fresh theme only once on initial render
+	const [currentTheme] = useState(getRandomTheme());
 
 	// Use the first artist's image or fallback to a default
 	const mainArtistImage =
