@@ -3,7 +3,7 @@
 Collection of tools for Spotify integration, vector search, and web search.
 """
 
-from .spotify_tool import *
+from .spotify_agent.tools.spotify_tool import *
 from .database_search_tool import search_music_by_vibe
 from .tavily_tool import search_music_info
 

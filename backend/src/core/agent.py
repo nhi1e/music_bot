@@ -3,7 +3,7 @@ from langchain_core.messages import HumanMessage, ToolMessage, AIMessage, System
 from .memory import memory
 from .schema import ChatState
 from .classifier import classify_query
-from ..tools.spotify_tool import (
+from ..tools.spotify_agent.tools.spotify_tool import (
     get_top_tracks, 
     get_top_artists,
     get_playlist_names, 
@@ -474,7 +474,7 @@ def call_model(state: ChatState) -> ChatState:
                             
                             if song_info["song"] and song_info["artist"]:
                                 # Import Spotify recommendation tool
-                                from ..tools.spotify_tool import get_recommendations_by_track
+                                from ..tools.spotify_agent.tools.spotify_tool import get_recommendations_by_track
                                 
                                 try:
                                     spotify_output = get_recommendations_by_track.invoke({

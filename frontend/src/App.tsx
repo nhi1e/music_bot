@@ -194,13 +194,14 @@ function App() {
 	}
 
 	return (
-		<div className="min-h-screen bg-black text-white flex flex-col font-mono">
+		<div className="min-h-screen bg-black text-white flex flex-col font-mono relative">
 			<Header user={user} onLogout={handleLogout} />
-			<ChatContainer
-				ref={chatContainerRef}
-				messages={messages}
-				isTyping={isTyping}
-			/>
+
+			{/* ChatContainer scrolls */}
+			<div className="flex-1 overflow-y-auto" ref={chatContainerRef}>
+				<ChatContainer messages={messages} isTyping={isTyping} />
+			</div>
+			{/* ChatInput always at the top */}
 			<ChatInput
 				value={inputValue}
 				onChange={setInputValue}
@@ -209,6 +210,7 @@ function App() {
 			/>
 		</div>
 	);
+
 }
 
 export default App;
