@@ -62,10 +62,15 @@ python run.py setup  # Validates environment
 
 ### 📁 `src/tools/` - LangChain Tools
 
-- **`spotify_tool.py`**: Spotify API integration tools
-- **`vector_search_tool.py`**: Music similarity search using embeddings
+- **`spotify/`**: Modular Spotify API tools organized by functionality
+  - `tracks.py`: Track-related tools (top tracks, recently played, search, saved)
+  - `artists.py`: Artist tools (top artists, following, search)
+  - `playlists.py`: Playlist management tools
+  - `user.py`: User profile tools
+  - `recommendations.py`: Music recommendation tools
+  - `wrapped.py`: Spotify Wrapped generation
+- **`database_search_tool.py`**: Music similarity search using embeddings
 - **`tavily_tool.py`**: Web search for music information
-- **`vector.py`**: Vector embedding utilities
 
 ### 📁 `config/` - Configuration
 
@@ -154,12 +159,12 @@ The reorganized structure uses relative imports:
 
 ```python
 # Core modules
-from src.core.agent import graph
+from src.agent.main_graph import graph
 from src.core.classifier import classify_query
 
 # Tools
-from src.tools.spotify_tool import get_top_tracks
-from src.tools.vector_search_tool import search_music_by_vibe
+from src.tools.spotify import get_top_tracks
+from src.tools.database_search_tool import search_music_by_vibe
 
 # Configuration
 from config.settings import config

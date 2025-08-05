@@ -5,12 +5,12 @@ Complete integration test for the music recommendation bot with vector search
 
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from app.classifier import classify_query
-from app.tools.vector_search_tool import search_music_by_vibe
-from app.agent import graph
-from app.schema import ChatState
+from src.core.classifier import classify_query
+from src.tools.database_search_tool import search_music_by_vibe
+from src.agent.main_graph import graph
+from src.core.schema import ChatState
 import json
 
 def test_full_integration():

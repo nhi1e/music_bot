@@ -24,10 +24,10 @@ import json
 from typing import List, Dict, Any
 
 # Import your RAG components
-from app.agent import graph
-from app.schema import ChatState
-from app.tools.vector_search_tool import search_music_by_vibe
-from app.tools.spotify_tool import get_top_tracks, search_tracks
+from src.agent.main_graph import graph
+from src.core.schema import ChatState
+from src.tools.database_search_tool import search_music_by_vibe
+from src.tools.spotify import get_top_tracks, search_tracks
 
 # Load environment variables
 load_dotenv()

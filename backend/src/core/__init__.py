@@ -1,11 +1,10 @@
 # Core modules for the music RAG system
 """
-Core components including agent, classifier, memory, and schema definitions.
+Core components including memory and schema definitions.
+The main graph and classifier are now in the agent package.
 """
 
-from .agent import graph
-from .classifier import classify_query
 from .memory import memory
 from .schema import ChatState
 
-__all__ = ['graph', 'classify_query', 'memory', 'ChatState']
+__all__ = ['memory', 'ChatState']

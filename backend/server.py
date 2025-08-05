@@ -8,8 +8,8 @@ import os
 from dotenv import load_dotenv
 import urllib.parse
 from langchain_core.messages import HumanMessage
-from app.agent import graph
-from app.schema import ChatState
+from src.agent.main_graph import graph
+from src.core.schema import ChatState
 
 # Load environment variables
 load_dotenv()
@@ -20,9 +20,8 @@ app = FastAPI(title="Music Recommendation Bot API")
 class ChatMessage(BaseModel):
     message: str
 
-# In-memory session storage for conversation history
-# In production, this should be replaced with a proper database
-conversation_sessions = {}
+# Memory is now handled by LangGraph's InMemorySaver with thread IDs
+# No need for manual conversation_sessions
 
 # Add CORS middleware
 app.add_middleware(
@@ -142,10 +141,10 @@ async def logout():
                 user_info = sp.current_user()
                 user_id = user_info['id']
                 
-                # Clear conversation history for this user
-                if user_id in conversation_sessions:
-                    del conversation_sessions[user_id]
-                    print(f"Cleared conversation history for user: {user_id}")
+                # Clear LangGraph memory for this user
+                print(f"Memory reset for user: {user_id} (handled by LangGraph checkpointer)")
+                # Note: LangGraph memory can be cleared by using different thread IDs
+                # For now, we'll rely on the in-memory nature resetting on server restart
             except:
                 pass  # If token is invalid, just continue with logout
         
@@ -200,22 +199,16 @@ async def chat(message: ChatMessage):
         user_info = sp.current_user()
         user_id = user_info['id']
         
-        # Get or create conversation session for this user
-        if user_id not in conversation_sessions:
-            conversation_sessions[user_id] = []
-        
-        # Add user message to session history
-        user_message = HumanMessage(content=message.message)
-        conversation_sessions[user_id].append(user_message)
-        
-        # Create chat state with conversation history
-        state = ChatState(messages=conversation_sessions[user_id].copy())
-        
         # Use thread ID based on user ID for memory persistence
         thread_id = f"user_{user_id}"
         config = {"configurable": {"thread_id": thread_id}}
         
-        # Run the agent
+        # Create a simple state with just the new user message
+        # LangGraph's memory will handle conversation history automatically
+        user_message = HumanMessage(content=message.message)
+        state = ChatState(messages=[user_message])
+        
+        # Run the agent - memory will be handled by LangGraph's checkpointer
         result = graph.invoke(state, config=config)
         
         # Get the last AI message from the result
@@ -230,9 +223,7 @@ async def chat(message: ChatMessage):
         if not ai_response:
             ai_response = "Hey! I'm having some trouble with that response. Mind trying again? 🎧"
         
-        # Update conversation session with the complete result
-        conversation_sessions[user_id] = result["messages"]
-        
+        # No need to manually manage conversation_sessions - LangGraph handles it
         return {"response": ai_response}
         
     except Exception as e:

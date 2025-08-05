@@ -31,7 +31,7 @@ def run_server():
 
 def run_evaluation():
     """Run RAG evaluation"""
-    print("🎵 Running Music RAG Evaluation...")
+    print("Running Music RAG Evaluation...")
     print("Choose evaluation type:")
     print("1. Quick evaluation")
     print("2. Comprehensive analysis")

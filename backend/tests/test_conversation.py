@@ -5,7 +5,7 @@ Test the improved conversational flow and remember functionality
 """
 
 import asyncio
-from app.agent import graph
+from src.agent.main_graph import graph
 from langchain_core.messages import HumanMessage
 
 async def test_conversation_flow():

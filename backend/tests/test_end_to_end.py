@@ -9,7 +9,7 @@ End-to-end test to verify the music bot behavior:
 
 import os
 import sys
-from app.agent import graph
+from src.agent.main_graph import graph
 from app.schema import ChatState
 from langchain_core.messages import HumanMessage
 

@@ -4,7 +4,7 @@ Test script to verify the bot NEVER uses built-in knowledge
 """
 
 import asyncio
-from app.agent import graph
+from src.agent.main_graph import graph
 from langchain_core.messages import HumanMessage
 
 async def test_tool_usage():
