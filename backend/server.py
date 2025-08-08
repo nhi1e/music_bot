@@ -20,9 +20,6 @@ app = FastAPI(title="Music Recommendation Bot API")
 class ChatMessage(BaseModel):
     message: str
 
-# Memory is now handled by LangGraph's InMemorySaver with thread IDs
-# No need for manual conversation_sessions
-
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -229,7 +226,7 @@ async def chat(message: ChatMessage):
     except Exception as e:
         print(f"Chat error: {str(e)}")
         # Return a DJ-style error message
-        error_response = f"Yo, I hit a technical snag there! 🎵 Let's try that again - {str(e)}"
+        error_response = f"Yo, I hit a technical snag there! Let's try that again - {str(e)}"
         return {"response": error_response}
 
 if __name__ == "__main__":

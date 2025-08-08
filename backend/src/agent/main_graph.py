@@ -179,22 +179,40 @@ def handle_memory_and_conversation(state: ChatState) -> ChatState:
         is_conversational = False
     
     if is_conversational:
-        # Handle conversational responses naturally
-        conversational_responses = {
-            "yeah": "Right on! 🎵 What's next on your musical journey?",
-            "cool": "Awesome! 🎧 Want to discover something new?",
-            "nice": "Glad you like it! What else can I help you explore?",
-            "thanks": "You're welcome! Always here for your music needs 🎶",
-            "ok": "Sweet! What other musical adventures should we dive into?",
-            "good": "Nice! 🎵 Ready for more music exploration?",
-            "awesome": "Right?! 🎧 Let's keep the music flowing - what's next?"
-        }
+        # Let the AI respond naturally without tools for conversational inputs
+        conversational_llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
         
-        response_text = conversational_responses.get(user_input_lower, 
-            "Right on! 🎵 What else can I help you discover in the world of music?")
+        # Create a simple prompt for conversational responses
+        conversational_prompt = """You are DJ Spotify, a friendly music assistant. The user just said something casual/conversational. 
         
-        response = AIMessage(content=response_text)
-        state["messages"].append(response)
+        Respond naturally and briefly while gently steering the conversation back to music topics. Keep your response:
+        - Short and casual (1-2 sentences max)
+        - Music-focused but not pushy
+        - Encouraging and friendly
+        - Use occasional music emojis 🎵🎧
+        
+        Do NOT use any tools or search for information. Just respond conversationally."""
+        
+        # Get the user's conversational input
+        user_message = state["messages"][-1].content
+        
+        # Create messages for the conversational response
+        conv_messages = [
+            SystemMessage(content=conversational_prompt),
+            HumanMessage(content=user_message)
+        ]
+        
+        try:
+            # Get AI response without tools
+            conv_response = conversational_llm.invoke(conv_messages)
+            response = AIMessage(content=conv_response.content)
+            state["messages"].append(response)
+        except Exception as e:
+            print(f"[Conversational Handler] Error: {e}")
+            # Fallback to a simple response
+            response = AIMessage(content="Right on! 🎵 What's next on your musical journey?")
+            state["messages"].append(response)
+        
         return {"messages": state["messages"]}
     
     return state

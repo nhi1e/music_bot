@@ -54,11 +54,11 @@ def setup_environment():
     
     try:
         Config.validate()
-        print("✅ Environment configuration is valid")
+        print("Environment configuration is valid")
         return True
     except ValueError as e:
-        print(f"❌ Configuration error: {e}")
-        print("\n💡 Please check your .env file and ensure all required variables are set:")
+        print(f"Configuration error: {e}")
+        print("\n  Please check your .env file and ensure all required variables are set:")
         print("   - SPOTIFY_CLIENT_ID")
         print("   - SPOTIFY_CLIENT_SECRET")
         print("   - SPOTIFY_REDIRECT_URI")
